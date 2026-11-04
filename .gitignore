@@ -1,0 +1,9 @@
+# never commit filled-in config or local state
+*.local.json
+*.env
+.env*
+kev_state.json
+dashboard/config.js
+node_modules/
+.DS_Store
+Thumbs.db

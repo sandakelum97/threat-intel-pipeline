@@ -1,0 +1,282 @@
+{
+  "name": "TI 01 \u2013 KEV Monitor",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 6 * * *"
+            }
+          ]
+        }
+      },
+      "id": "dfacea53-17d7-4281-9e20-348d81ef57bc",
+      "name": "Schedule",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -220,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// ====== DEMO CONFIG \u2013 move these to n8n Credentials / Variables before production ======\nreturn [{\n  json: {\n    SUPABASE_URL: \"https://YOUR-PROJECT.supabase.co\",\n    SUPABASE_SERVICE_KEY: \"YOUR-SERVICE-ROLE-KEY\",      // server-side only, never in the dashboard\n    TEAMS_WEBHOOK: \"https://YOUR-TENANT.webhook.office.com/webhookb2/....\",\n    DASHBOARD_URL: \"https://your-dashboard-url/\",      // shown at the bottom of Teams cards\n\n    // Vendors/products in client environments. Case-insensitive substring match on\n    // vendorProject + product (KEV) and title + summary (news).\n    VENDOR_ALLOWLIST: [\n      \"Microsoft\",\"Windows\",\"Exchange\",\"SharePoint\",\"Office\",\"Entra\",\"Azure\",\"Intune\",\n      \"Fortinet\",\"FortiGate\",\"FortiOS\",\"FortiManager\",\"FortiAnalyzer\",\"FortiClient\",\n      \"ConnectWise\",\"ScreenConnect\",\"NinjaOne\",\"Ninja RMM\",\n      \"Cisco\",\"Ivanti\",\"Citrix\",\"NetScaler\",\"VMware\",\"Broadcom\",\"Veeam\",\"SonicWall\",\n      \"Palo Alto\",\"PAN-OS\",\"GlobalProtect\",\"Apple\",\"iOS\",\"macOS\",\"Google\",\"Chrome\",\"Chromium\",\n      \"Mozilla\",\"Firefox\",\"Adobe\",\"Acrobat\",\"Atlassian\",\"Confluence\",\"Jira\",\"Oracle\",\n      \"SolarWinds\",\"Zoho\",\"ManageEngine\",\"Synology\",\"QNAP\",\"Ubiquiti\",\"UniFi\",\n      \"Dell\",\"Lenovo\",\"Progress\",\"MOVEit\",\"GitLab\",\"Jenkins\",\"OpenSSL\",\"Linux\",\"Ubuntu\",\n      \"Samba\",\"PaperCut\",\"Kaseya\",\"CrowdStrike\",\"Proofpoint\",\"ThreatLocker\",\"7-Zip\",\"WinRAR\",\n      \"Auvik\",\"Proxmox\",\"Hyper-V\",\"SQL Server\",\"Teams\",\"OneDrive\",\"Outlook\",\"Defender\"\n    ],\n\n    // High-signal phrases for news scoring (weight added to score)\n    SIGNAL_TERMS: {\n      \"zero-day\": 3, \"0-day\": 3, \"actively exploited\": 3, \"in the wild\": 3,\n      \"exploited\": 2, \"ransomware\": 2, \"critical\": 1, \"rce\": 2, \"remote code execution\": 2,\n      \"authentication bypass\": 2, \"patch now\": 2, \"emergency\": 2, \"out-of-band\": 2,\n      \"cve-\": 1, \"australia\": 2, \"australian\": 2, \"msp\": 2, \"mssp\": 2, \"rmm\": 2,\n      \"supply chain\": 1, \"phishing\": 1, \"data breach\": 1\n    },\n    MIN_SCORE: 3,                 // article is \"relevant\" at or above this\n    KEV_LOOKBACK_DAYS: 14,        // on first run, only notify about KEV entries this recent\n    AI_ENABLED: false             // flip to true once ANTHROPIC key is set in the AI node\n  }\n}];",
+        "mode": "runOnceForAllItems"
+      },
+      "id": "4a3bef0b-ead5-4ca7-a4e6-02e53ad401ec",
+      "name": "Config",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        0,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "144d1620-995d-4c63-9db5-d95dbbe104ab",
+      "name": "Fetch KEV catalog",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        220,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const cfg = $('Config').first().json;\nconst allow = cfg.VENDOR_ALLOWLIST.map(s => s.toLowerCase());\nconst catalog = $input.first().json;\nconst vulns = catalog.vulnerabilities || [];\n\nconst rows = [];\nfor (const v of vulns) {\n  const hay = `${v.vendorProject} ${v.product}`.toLowerCase();\n  const hit = allow.find(a => hay.includes(a));\n  if (!hit) continue;\n  rows.push({\n    cve_id: v.cveID,\n    vendor: v.vendorProject,\n    product: v.product,\n    vuln_name: v.vulnerabilityName,\n    description: v.shortDescription,\n    required_action: v.requiredAction,\n    date_added: v.dateAdded,\n    due_date: v.dueDate,\n    ransomware: v.knownRansomwareCampaignUse || 'Unknown',\n    matched_vendor: hit,\n    catalog_version: catalog.catalogVersion,\n  });\n}\nreturn [{ json: { rows, total_in_catalog: vulns.length, in_scope: rows.length } }];",
+        "mode": "runOnceForAllItems"
+      },
+      "id": "342140ea-5404-477d-8ab8-2933a306ba49",
+      "name": "Filter to our vendors",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Config').first().json.SUPABASE_URL }}/rest/v1/kev_entries?on_conflict=cve_id",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $('Config').first().json.SUPABASE_SERVICE_KEY }}"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Config').first().json.SUPABASE_SERVICE_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "resolution=ignore-duplicates,return=representation"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.rows) }}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "1bec433d-a6d2-4f42-ae21-c081d3a5ea14",
+      "name": "Upsert kev_entries (new rows only)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        660,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Supabase returned ONLY the rows it inserted (Prefer: resolution=ignore-duplicates,return=representation)\nconst cfg = $('Config').first().json;\nconst inserted = $input.all().map(i => i.json).filter(r => r && r.cve_id);\nconst cutoff = new Date(Date.now() - cfg.KEV_LOOKBACK_DAYS * 86400000);\nconst fresh = inserted.filter(r => new Date(r.date_added) >= cutoff)\n                      .sort((a, b) => (a.date_added < b.date_added ? 1 : -1));\nif (fresh.length === 0) return [];\n\nconst body = [\n  { type: 'TextBlock', size: 'Large', weight: 'Bolder',\n    text: `CISA KEV \u2013 ${fresh.length} new in-scope ${fresh.length === 1 ? 'entry' : 'entries'}` },\n  { type: 'TextBlock', isSubtle: true, spacing: 'None',\n    text: `Filtered to vendors in our client environments \u00b7 ${inserted.length} stored this run` },\n];\nfor (const r of fresh.slice(0, 15)) {\n  const flag = r.ransomware === 'Known' ? ' \u26a0 **Ransomware use known**' : '';\n  body.push({ type: 'TextBlock', weight: 'Bolder', spacing: 'Medium', wrap: true,\n    text: `[${r.cve_id}](https://nvd.nist.gov/vuln/detail/${r.cve_id}) \u2013 ${r.vendor} ${r.product}${flag}` });\n  body.push({ type: 'TextBlock', wrap: true, spacing: 'None', text: r.vuln_name });\n  body.push({ type: 'TextBlock', wrap: true, spacing: 'None', isSubtle: true,\n    text: `Added ${r.date_added} \u00b7 Federal due ${r.due_date} \u00b7 ${r.required_action}` });\n}\nif (fresh.length > 15) body.push({ type: 'TextBlock', isSubtle: true, text: `\u2026and ${fresh.length - 15} more on the dashboard` });\nbody.push({ type: 'TextBlock', spacing: 'Medium', text: `[Open dashboard](${cfg.DASHBOARD_URL})` });\n\nreturn [{ json: { card: body, count: fresh.length, cves: fresh.map(r => r.cve_id) } }];",
+        "mode": "runOnceForAllItems"
+      },
+      "id": "966b599e-6815-4e35-84a5-686b3acea735",
+      "name": "Build Teams card",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Config').first().json.TEAMS_WEBHOOK }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ type: 'message', attachments: [{ contentType: 'application/vnd.microsoft.card.adaptive', contentUrl: null, content: { $schema: 'http://adaptivecards.io/schemas/adaptive-card.json', type: 'AdaptiveCard', version: '1.4', msteams: { width: 'Full' }, body: $json.card } }] }) }}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "d61316a5-db62-46f5-b30b-37819a801376",
+      "name": "Post to Teams",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1100,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Config').first().json.SUPABASE_URL }}/rest/v1/digest_log",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $('Config').first().json.SUPABASE_SERVICE_KEY }}"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Config').first().json.SUPABASE_SERVICE_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=minimal"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ kind: 'kev', item_count: $('Build Teams card').first().json.count, payload: { cves: $('Build Teams card').first().json.cves } }) }}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "26ff1dd2-02f8-47eb-aee8-b0a29fa99b0b",
+      "name": "Log digest",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1320,
+        300
+      ],
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "connections": {
+    "Schedule": {
+      "main": [
+        [
+          {
+            "node": "Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config": {
+      "main": [
+        [
+          {
+            "node": "Fetch KEV catalog",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch KEV catalog": {
+      "main": [
+        [
+          {
+            "node": "Filter to our vendors",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter to our vendors": {
+      "main": [
+        [
+          {
+            "node": "Upsert kev_entries (new rows only)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upsert kev_entries (new rows only)": {
+      "main": [
+        [
+          {
+            "node": "Build Teams card",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Teams card": {
+      "main": [
+        [
+          {
+            "node": "Post to Teams",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Post to Teams": {
+      "main": [
+        [
+          {
+            "node": "Log digest",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "meta": {
+    "instanceId": "threat-intel-demo"
+  }
+}

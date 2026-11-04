@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Threat Intel Watch</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one summary strip, then two stacked work-queues (KEV, then news) with a sticky filter bar. */
+:root {
+  --bg: #f6f7f4;        --panel: #ffffff;    --fg: #1b1f1c;       --muted: #5f675f;
+  --line: #d9ddd6;      --accent: #0f5e4a;   --accent-ink: #ffffff;
+  --crit: #b3261e;      --warn: #9a6200;     --ok: #2e6b3a;
+  --chip: #e8ebe4;      --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  --sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #121513; --panel: #1b1f1c; --fg: #e9ece6; --muted: #9ca59b; --line: #2d332e;
+  --accent: #5fc3a2; --accent-ink: #0f1a15; --crit: #ff7b72; --warn: #e3b341; --ok: #7ad68a; --chip: #262c27;
+  color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #121513; --panel: #1b1f1c; --fg: #e9ece6; --muted: #9ca59b; --line: #2d332e;
+  --accent: #5fc3a2; --accent-ink: #0f1a15; --crit: #ff7b72; --warn: #e3b341; --ok: #7ad68a; --chip: #262c27;
+  color-scheme: dark; }
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--fg); font: 14px/1.5 var(--sans);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 0 48px; }
+a { color: inherit; }
+h1, h2 { text-wrap: balance; margin: 0; }
+h1 { font-size: 20px; font-weight: 600; letter-spacing: -0.01em; }
+h2 { font-size: 15px; font-weight: 600; }
+.wrap { max-width: 1180px; margin: 0 auto; }
+header { display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: baseline; justify-content: space-between; padding-block: 20px 12px; }
+.meta { color: var(--muted); font-family: var(--mono); font-size: 12px; }
+.label { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); font-weight: 500; }
+
+.strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-block: 8px 20px; }
+.tile { background: var(--panel); border: 1px solid var(--line); padding: 12px 14px; display: grid; gap: 2px; }
+.tile .n { font: 500 26px/1.1 var(--mono); font-variant-numeric: tabular-nums; }
+.tile .n.crit { color: var(--crit); }
+.tile .sub { color: var(--muted); font-size: 12px; }
+
+.bar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg); border-bottom: 1px solid var(--line);
+  display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; padding-block: 10px; margin-bottom: 16px; }
+.bar input, .bar select { font: inherit; color: var(--fg); background: var(--panel); border: 1px solid var(--line); padding: 6px 8px; min-width: 0; }
+.bar input { flex: 1 1 220px; }
+.bar label { display: inline-flex; gap: 6px; align-items: center; color: var(--muted); }
+.spacer { flex: 1 1 auto; }
+button.ghost { font: inherit; background: transparent; color: var(--accent); border: 1px solid var(--accent); padding: 6px 10px; cursor: pointer; }
+button.ghost:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+section { margin-bottom: 28px; }
+.sect-head { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: baseline; justify-content: space-between; margin-bottom: 8px; }
+.tablewrap { overflow-x: auto; border: 1px solid var(--line); background: var(--panel); }
+table { border-collapse: collapse; width: 100%; min-width: 720px; }
+th, td { text-align: left; padding: 9px 12px; border-top: 1px solid var(--line); vertical-align: top; }
+th { border-top: 0; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); font-weight: 500; white-space: nowrap; }
+td.mono, th.mono { font-family: var(--mono); font-size: 12.5px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+td .t { font-weight: 500; }
+td .s { color: var(--muted); font-size: 12.5px; margin-top: 2px; }
+tr.rw td:first-child { box-shadow: inset 3px 0 0 var(--crit); }
+.chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.chip { background: var(--chip); font-family: var(--mono); font-size: 11px; padding: 1px 6px; border-radius: 2px; }
+.chip.sig { background: transparent; border: 1px solid var(--line); }
+.pill { display: inline-block; font-family: var(--mono); font-size: 11px; padding: 1px 7px; border-radius: 10px; border: 1px solid currentColor; }
+.pill.crit { color: var(--crit); } .pill.warn { color: var(--warn); } .pill.ok { color: var(--ok); } .pill.muted { color: var(--muted); }
+.score { font-family: var(--mono); font-weight: 500; }
+.empty { padding: 24px; color: var(--muted); text-align: center; }
+.notice { border: 1px solid var(--warn); color: var(--warn); padding: 8px 12px; margin-block: 8px 16px; font-size: 13px; }
+.notice code { font-family: var(--mono); }
+footer { color: var(--muted); font-size: 12px; margin-top: 24px; }
+@media (max-width: 640px) { table { min-width: 600px; } .tile .n { font-size: 22px; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div>
+    <h1>Threat Intel Watch</h1>
+    <div class="meta" id="updated">loading…</div>
+  </div>
+  <div class="meta">KEV filtered to client vendors · news keyword-scored · <span id="mode"></span></div>
+</header>
+
+<div class="notice" id="demoNotice" hidden>Showing <strong>sample data</strong>. Set <code>SUPABASE_URL</code> and <code>SUPABASE_ANON_KEY</code> at the top of the script to read live data.</div>
+
+<div class="strip" id="strip"></div>
+
+<div class="bar">
+  <input id="q" type="search" placeholder="Search CVE, vendor, title, keyword…" aria-label="Search">
+  <label>Source <select id="src"><option value="">All</option></select></label>
+  <label>Window <select id="win"><option value="1">24 h</option><option value="7" selected>7 days</option><option value="30">30 days</option><option value="0">All</option></select></label>
+  <label><input type="checkbox" id="relOnly" checked> Relevant only</label>
+  <span class="spacer"></span>
+  <button class="ghost" id="refresh" type="button">Refresh</button>
+</div>
+
+<section>
+  <div class="sect-head"><h2>Known Exploited Vulnerabilities in our stack</h2><span class="meta" id="kevCount"></span></div>
+  <div class="tablewrap"><table id="kev">
+    <thead><tr><th class="mono">CVE</th><th>Vendor / product</th><th>Vulnerability</th><th class="mono">Added</th><th class="mono">Fed. due</th><th>Ransomware</th></tr></thead>
+    <tbody></tbody></table></div>
+</section>
+
+<section>
+  <div class="sect-head"><h2>Articles</h2><span class="meta" id="artCount"></span></div>
+  <div class="tablewrap"><table id="arts">
+    <thead><tr><th class="mono">Score</th><th>Title</th><th>Source</th><th>Why it was kept</th><th class="mono">Published</th></tr></thead>
+    <tbody></tbody></table></div>
+</section>
+
+<footer>Sources: CISA KEV · CISA advisories · ASD ACSC alerts &amp; advisories · MSRC · Fortinet PSIRT · BleepingComputer · The Hacker News · AskWoody. Pipeline: n8n → Supabase → Teams.</footer>
+</div>
+
+<script>
+// ===================== CONFIG =====================
+const SUPABASE_URL = "";          // e.g. https://abcd1234.supabase.co
+const SUPABASE_ANON_KEY = "";     // anon (public) key only – never the service role key
+// ==================================================
+
+const SAMPLE = {
+  kev: [
+    {cve_id:"CVE-2026-20951",vendor:"Fortinet",product:"FortiOS, FortiProxy",vuln_name:"FortiOS SSL-VPN out-of-bounds write",date_added:"2026-11-03",due_date:"2026-11-24",ransomware:"Known",matched_vendor:"fortinet"},
+    {cve_id:"CVE-2026-19844",vendor:"Microsoft",product:"Windows",vuln_name:"Windows CLFS driver privilege escalation",date_added:"2026-11-03",due_date:"2026-11-17",ransomware:"Unknown",matched_vendor:"microsoft"},
+    {cve_id:"CVE-2026-18207",vendor:"Google",product:"Chromium V8",vuln_name:"Chromium V8 type confusion",date_added:"2026-11-01",due_date:"2026-11-22",ransomware:"Unknown",matched_vendor:"chrom"},
+    {cve_id:"CVE-2026-17110",vendor:"ConnectWise",product:"ScreenConnect",vuln_name:"ScreenConnect authentication bypass",date_added:"2026-10-29",due_date:"2026-11-12",ransomware:"Known",matched_vendor:"connectwise"},
+    {cve_id:"CVE-2026-16002",vendor:"Citrix",product:"NetScaler ADC and Gateway",vuln_name:"NetScaler memory overread",date_added:"2026-10-27",due_date:"2026-11-10",ransomware:"Unknown",matched_vendor:"citrix"}
+  ],
+  articles: [
+    {link:"https://www.bleepingcomputer.com/news/security/sample-1",title:"Fortinet warns of actively exploited FortiOS SSL-VPN zero-day",source:"BleepingComputer",published_at:"2026-11-04T01:10:00Z",summary:"Fortinet released emergency patches for an out-of-bounds write in FortiOS and FortiProxy SSL-VPN that is being exploited in the wild.",score:19,matched_terms:["fortinet","fortios","zero-day","actively exploited","exploited","cve-"],relevant:true},
+    {link:"https://www.cyber.gov.au/sample-2",title:"ACSC alert: ransomware actors targeting Australian managed service providers",source:"ASD ACSC",published_at:"2026-11-03T22:30:00Z",summary:"ASD's ACSC is aware of ransomware targeting Australian MSPs via exposed RMM tooling.",score:14,matched_terms:["ransomware","australian","msp","rmm"],relevant:true},
+    {link:"https://api.msrc.microsoft.com/sample-3",title:"CVE-2026-19844 Windows Common Log File System Driver Elevation of Privilege",source:"MSRC",published_at:"2026-11-03T18:00:00Z",summary:"Microsoft has confirmed exploitation. Patch Tuesday update available.",score:9,matched_terms:["microsoft","windows","exploited","cve-"],relevant:true},
+    {link:"https://thehackernews.com/sample-4",title:"New Linux botnet targets unpatched D-Link routers",source:"The Hacker News",published_at:"2026-11-03T12:00:00Z",summary:"A Mirai variant is spreading via old router flaws.",score:4,matched_terms:["linux","exploited"],relevant:true},
+    {link:"https://www.askwoody.com/sample-5",title:"November Patch Tuesday: what to hold and what to install",source:"AskWoody",published_at:"2026-11-03T09:00:00Z",summary:"Monthly guidance on Windows and Office updates.",score:5,matched_terms:["windows","office","patch now"],relevant:true},
+    {link:"https://thehackernews.com/sample-6",title:"Crypto exchange loses $40M in smart-contract exploit",source:"The Hacker News",published_at:"2026-11-02T20:00:00Z",summary:"DeFi platform drained after reentrancy bug.",score:0,matched_terms:[],relevant:false},
+    {link:"https://www.bleepingcomputer.com/sample-7",title:"Steam adds new parental controls",source:"BleepingComputer",published_at:"2026-11-02T15:00:00Z",summary:"Valve rolls out account-level restrictions.",score:0,matched_terms:[],relevant:false}
+  ]
+};
+
+const SIGNALS = new Set(["zero-day","0-day","actively exploited","in the wild","exploited","ransomware","critical","rce","remote code execution","authentication bypass","patch now","emergency","out-of-band","cve-","australia","australian","msp","mssp","rmm","supply chain","phishing","data breach"]);
+
+let data = { kev: [], articles: [] };
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const fmtDate = (s) => s ? new Date(s).toLocaleDateString("en-AU", {day:"2-digit", month:"short"}) : "";
+const fmtDT = (s) => s ? new Date(s).toLocaleString("en-AU", {day:"2-digit", month:"short", hour:"2-digit", minute:"2-digit"}) : "";
+
+async function sb(path) {
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } });
+  if (!r.ok) throw new Error(`${path}: HTTP ${r.status}`);
+  return r.json();
+}
+
+async function load() {
+  const live = SUPABASE_URL && SUPABASE_ANON_KEY;
+  $("#demoNotice").hidden = !!live;
+  $("#mode").textContent = live ? "live" : "sample data";
+  try {
+    if (live) {
+      const since = new Date(Date.now() - 30 * 86400000).toISOString();
+      const [kev, articles] = await Promise.all([
+        sb(`kev_entries?order=date_added.desc&limit=200`),
+        sb(`articles?published_at=gte.${since}&order=score.desc,published_at.desc&limit=500`),
+      ]);
+      data = { kev, articles };
+    } else {
+      data = SAMPLE;
+    }
+    $("#updated").textContent = `updated ${new Date().toLocaleString("en-AU")}`;
+  } catch (e) {
+    $("#updated").textContent = `load failed: ${e.message}`;
+  }
+  fillSources();
+  render();
+}
+
+function fillSources() {
+  const sel = $("#src"); const cur = sel.value;
+  const srcs = [...new Set(data.articles.map(a => a.source))].sort();
+  sel.innerHTML = `<option value="">All</option>` + srcs.map(s => `<option${s === cur ? " selected" : ""}>${esc(s)}</option>`).join("");
+}
+
+function render() {
+  const q = $("#q").value.trim().toLowerCase();
+  const src = $("#src").value;
+  const days = Number($("#win").value);
+  const relOnly = $("#relOnly").checked;
+  const cutoff = days ? Date.now() - days * 86400000 : 0;
+  const hit = (s) => !q || String(s).toLowerCase().includes(q);
+
+  const kev = data.kev.filter(k => (!cutoff || new Date(k.date_added).getTime() >= cutoff) &&
+    hit(`${k.cve_id} ${k.vendor} ${k.product} ${k.vuln_name}`));
+  const arts = data.articles.filter(a => (!cutoff || new Date(a.published_at).getTime() >= cutoff) &&
+    (!src || a.source === src) && (!relOnly || a.relevant) &&
+    hit(`${a.title} ${a.summary} ${(a.matched_terms || []).join(" ")}`));
+
+  const rw = kev.filter(k => k.ransomware === "Known").length;
+  const due7 = kev.filter(k => k.due_date && (new Date(k.due_date) - Date.now()) < 7 * 86400000).length;
+  const relevant = data.articles.filter(a => a.relevant && (!cutoff || new Date(a.published_at).getTime() >= cutoff)).length;
+  const total = data.articles.filter(a => !cutoff || new Date(a.published_at).getTime() >= cutoff).length;
+  $("#strip").innerHTML = [
+    tile(kev.length, "KEV entries in scope", "", days ? `last ${days} d` : "all time"),
+    tile(rw, "with known ransomware use", rw ? "crit" : "", "patch first"),
+    tile(due7, "federal due within 7 days", "", "CISA BOD 22-01 deadline"),
+    tile(relevant, "relevant articles", "", `of ${total} collected`),
+    tile(total ? Math.round(100 - relevant / total * 100) : 0, "% noise removed", "", "by keyword scoring"),
+  ].join("");
+
+  $("#kevCount").textContent = `${kev.length} shown`;
+  $("#kev tbody").innerHTML = kev.length ? kev.map(k => `
+    <tr class="${k.ransomware === "Known" ? "rw" : ""}">
+      <td class="mono"><a href="https://nvd.nist.gov/vuln/detail/${esc(k.cve_id)}" target="_blank" rel="noopener">${esc(k.cve_id)}</a></td>
+      <td><div class="t">${esc(k.vendor)}</div><div class="s">${esc(k.product)}</div></td>
+      <td>${esc(k.vuln_name)}<div class="s">matched: <span class="chip">${esc(k.matched_vendor)}</span></div></td>
+      <td class="mono">${fmtDate(k.date_added)}</td>
+      <td class="mono">${fmtDate(k.due_date)}</td>
+      <td>${k.ransomware === "Known" ? `<span class="pill crit">Known</span>` : `<span class="pill muted">Unknown</span>`}</td>
+    </tr>`).join("") : `<tr><td colspan="6" class="empty">No KEV entries match.</td></tr>`;
+
+  $("#artCount").textContent = `${arts.length} shown`;
+  $("#arts tbody").innerHTML = arts.length ? arts.map(a => `
+    <tr>
+      <td class="mono"><span class="score">${a.score}</span> ${a.relevant ? `<span class="pill ok">kept</span>` : `<span class="pill muted">dropped</span>`}</td>
+      <td><div class="t"><a href="${esc(a.link)}" target="_blank" rel="noopener">${esc(a.title)}</a></div><div class="s">${esc((a.summary || "").slice(0, 180))}</div></td>
+      <td>${esc(a.source)}</td>
+      <td><div class="chips">${(a.matched_terms || []).map(t => `<span class="chip ${SIGNALS.has(t) ? "sig" : ""}">${esc(t)}</span>`).join("") || `<span class="s">no matches</span>`}</div>
+          ${a.ai_reason ? `<div class="s">AI: ${esc(a.ai_reason)}</div>` : ""}</td>
+      <td class="mono">${fmtDT(a.published_at)}</td>
+    </tr>`).join("") : `<tr><td colspan="5" class="empty">No articles match.</td></tr>`;
+}
+
+function tile(n, label, cls, sub) {
+  return `<div class="tile"><span class="label">${esc(label)}</span><span class="n ${cls}">${esc(n)}</span><span class="sub">${esc(sub)}</span></div>`;
+}
+
+["#q", "#src", "#win", "#relOnly"].forEach(s => $(s).addEventListener("input", render));
+$("#refresh").addEventListener("click", load);
+load();
+</script>
+</body>
+</html>

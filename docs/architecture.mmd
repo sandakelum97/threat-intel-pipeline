@@ -1,0 +1,34 @@
+flowchart LR
+  subgraph Sources
+    KEV[CISA KEV JSON]
+    RSS[RSS feeds<br/>CISA · ACSC · MSRC · Fortinet<br/>BleepingComputer · THN · AskWoody]
+  end
+
+  subgraph n8n
+    W1[TI 01 KEV Monitor<br/>daily 06:00]
+    W2[TI 02 News Collector<br/>hourly]
+    W3[TI 03 Daily Digest<br/>weekdays 06:45]
+    AI[Claude relevancy check<br/>optional · disabled]
+  end
+
+  subgraph Supabase
+    T1[(kev_entries)]
+    T2[(articles)]
+    T3[(digest_log)]
+  end
+
+  TEAMS[Teams channel<br/>Adaptive Cards]
+  DASH[Dashboard<br/>index.html · anon key]
+
+  KEV --> W1
+  W1 -->|vendor allowlist<br/>insert new only| T1
+  W1 -->|new in-scope CVEs| TEAMS
+  RSS --> W2
+  W2 -->|keyword score<br/>dedupe · upsert| T2
+  W2 -.-> AI -.-> T2
+  T2 -->|relevant · last 24h| W3
+  W3 --> TEAMS
+  W1 --> T3
+  W3 --> T3
+  T1 --> DASH
+  T2 --> DASH
