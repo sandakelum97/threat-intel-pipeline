@@ -10,9 +10,9 @@ AI relevancy step is wired in but disabled.
 
 | Workflow | Schedule | What happens |
 |---|---|---|
-| **TI 01 – KEV Monitor** | daily 06:00 | Pulls the CISA KEV JSON, keeps entries whose vendor/product is in our allowlist, inserts new ones into `kev_entries`, posts the new ones to Teams. Supabase returns only rows it inserted, so there's no "seen list" to maintain. |
+| **TI 01 – KEV Monitor** | daily 06:00 | Pulls the CISA KEV JSON, keeps entries whose vendor/product is in our allowlist, inserts new ones into `kev_entries`, emails the new ones (Teams optional). Supabase returns only rows it inserted, so there's no "seen list" to maintain. |
 | **TI 02 – News Collector** | hourly | Reads 8 RSS feeds, dedupes by link, scores each article against the vendor allowlist and high-signal terms (zero-day, actively exploited, ransomware, Australia, MSP…), upserts into `articles` with the score and matched terms. |
-| **TI 03 – Daily Digest** | weekdays 06:45 | Reads relevant articles from the last 24 h, groups by source, posts one Adaptive Card to Teams. |
+| **TI 03 – Daily Digest** | weekdays 06:45 | Reads relevant articles from the last 24 h, groups by source, sends one HTML email (Teams optional). |
 
 The dashboard (`dashboard/index.html`) reads both tables with the anon key and shows KEV hits,
 kept/dropped articles and *why* each was kept.
@@ -23,15 +23,22 @@ kept/dropped articles and *why* each was kept.
 1. Open the SQL editor in your Supabase project and run `supabase/schema.sql`.
 2. Note the **Project URL**, the **service_role** key (for n8n) and the **anon** key (for the dashboard).
 
-### 2. Teams webhook
-In the target channel: **… → Workflows → "Post to a channel when a webhook request is received"**.
-Copy the webhook URL. (The old "Incoming Webhook" connector is retired; the Workflows one accepts the
-same Adaptive Card payload these workflows send.)
+### 2. Email (default output)
+The workflows email the KEV alert and the daily digest. In n8n create an **SMTP** credential:
+- Gmail: host `smtp.gmail.com`, port `465`, SSL on, user = your Gmail address, password = a
+  [Google app password](https://myaccount.google.com/apppasswords) (needs 2-step verification on).
+- Microsoft 365: host `smtp.office365.com`, port `587`, STARTTLS, if SMTP AUTH is enabled on the mailbox.
+
+Then set `EMAIL_FROM` and `EMAIL_TO` in each Config node and pick that credential on the **Send email** nodes.
+
+**Teams instead?** Each workflow also has a *Post to Teams (disabled)* node. Create a channel
+webhook (**… → Workflows → "Send webhook alerts to a channel"**), put the URL in `TEAMS_WEBHOOK`,
+enable that node and disable *Send email*. Needs a work/school tenant; personal Teams can't do it.
 
 ### 3. n8n
 1. **Workflows → Import from file** for each of `n8n/01-kev-monitor.json`, `02-news-collector.json`, `03-daily-digest.json`.
 2. In each workflow open the **Config** node and fill in `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`,
-   `TEAMS_WEBHOOK`, `DASHBOARD_URL`. Adjust `VENDOR_ALLOWLIST` / `SIGNAL_TERMS` / `MIN_SCORE` to taste.
+   `EMAIL_FROM`, `EMAIL_TO`, `DASHBOARD_URL`, then select your SMTP credential on the **Send email** node. Adjust `VENDOR_ALLOWLIST` / `SIGNAL_TERMS` / `MIN_SCORE` to taste.
    (For the demo the config lives in a Code node so there's nothing else to click. Before production,
    move the keys into n8n Credentials or Variables.)
 3. Run **TI 01** once manually. The first run stores the whole in-scope backlog but only posts entries
@@ -48,7 +55,7 @@ from a file share. Without keys it shows built-in sample data, which is handy fo
 
 1. Show the current manual process (the list of sites).
 2. Open **TI 01**, click *Execute workflow*, show the Filter node output (`total_in_catalog` vs `in_scope`),
-   then the Teams card that appears.
+   then the email that arrives.
 3. Open **TI 02**, execute, show the Score node output (score, matched terms, relevant flag), point out
    the dropped items.
 4. Open the dashboard: tiles → KEV table → articles with "why it was kept".

@@ -17,17 +17,17 @@ flowchart LR
     T3[(digest_log)]
   end
 
-  TEAMS[Teams channel<br/>Adaptive Cards]
+  OUT[Email to team<br/>Teams optional]
   DASH[Dashboard<br/>index.html · anon key]
 
   KEV --> W1
   W1 -->|vendor allowlist<br/>insert new only| T1
-  W1 -->|new in-scope CVEs| TEAMS
+  W1 -->|new in-scope CVEs| OUT
   RSS --> W2
   W2 -->|keyword score<br/>dedupe · upsert| T2
   W2 -.-> AI -.-> T2
   T2 -->|relevant · last 24h| W3
-  W3 --> TEAMS
+  W3 --> OUT
   W1 --> T3
   W3 --> T3
   T1 --> DASH
