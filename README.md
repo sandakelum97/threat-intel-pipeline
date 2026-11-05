@@ -25,7 +25,7 @@ kept/dropped articles and *why* each was kept.
 1. Open the SQL editor in your Supabase project and run `supabase/schema.sql`.
 2. Note the **Project URL**, the **service_role** key (for n8n) and the **anon** key (for the dashboard).
 
-Also run `supabase/migration-002-cvss-epss.sql` (CVSS/EPSS columns, `cve_watch` table).
+Also run `supabase/migration-002-cvss-epss.sql` (CVSS/EPSS columns, `cve_watch` table) and `supabase/migration-003-batch-key.sql` (browser release batching).
 
 ### 1b. NVD API key (TI 04 / TI 05)
 Request a free key at https://nvd.nist.gov/developers/request-an-api-key and put it in `NVD_API_KEY` in the Config node of TI 04 and TI 05.

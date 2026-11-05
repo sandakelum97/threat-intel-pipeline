@@ -211,7 +211,8 @@ const SAMPLE = {
     {cve_id:"CVE-2026-30011",published_at:iso(now()-0.3*DAY),description:"Veeam Backup & Replication allows an authenticated user to execute arbitrary code via a crafted restore request.",cvss_score:8.8,cvss_severity:"HIGH",epss_score:0.012,epss_percentile:0.84,matched_vendor:"veeam",cpe_vendors:["veeam"]},
     {cve_id:"CVE-2026-30020",published_at:iso(now()-0.8*DAY),description:"SonicWall SMA 1000 series: unauthenticated path traversal leading to file disclosure.",cvss_score:9.1,cvss_severity:"CRITICAL",epss_score:0.33,epss_percentile:0.97,matched_vendor:"sonicwall",cpe_vendors:["sonicwall"]},
     {cve_id:"CVE-2026-29990",published_at:iso(now()-1.6*DAY),description:"Microsoft Exchange Server elevation of privilege via improper token validation.",cvss_score:7.5,cvss_severity:"HIGH",epss_score:0.004,epss_percentile:0.71,matched_vendor:"exchange",cpe_vendors:["microsoft"]},
-    {cve_id:"CVE-2026-20951",published_at:iso(now()-2*DAY),description:"Fortinet FortiOS SSL-VPN out-of-bounds write (also in KEV).",cvss_score:9.8,cvss_severity:"CRITICAL",epss_score:0.912,epss_percentile:0.998,matched_vendor:"fortinet",cpe_vendors:["fortinet"]}
+    {cve_id:"CVE-2026-20951",published_at:iso(now()-2*DAY),description:"Fortinet FortiOS SSL-VPN out-of-bounds write (also in KEV).",cvss_score:9.8,cvss_severity:"CRITICAL",epss_score:0.912,epss_percentile:0.998,matched_vendor:"fortinet",cpe_vendors:["fortinet"]},
+    ...[...Array(12)].map((_, i) => ({cve_id:`CVE-2026-1210${30+i}`,published_at:iso(now()-0.5*DAY),description:`Use after free in Prerender in Google Chrome prior to 157.0.8103.38 allowed a remote attacker to execute arbitrary code via a crafted HTML page. (${i+1})`,cvss_score:i?8.8:9.6,cvss_severity:i?"HIGH":"CRITICAL",epss_score:0.004,epss_percentile:0.6,matched_vendor:"chrome",cpe_vendors:["google"],batch_key:"google-chrome@157.0.8103.38"}))
   ],
   articles: [
     {link:"https://www.bleepingcomputer.com/news/security/sample-1",title:"Fortinet warns of actively exploited FortiOS SSL-VPN zero-day",source:"BleepingComputer",published_at:iso(now()-0.4*DAY),summary:"Fortinet released emergency patches for an out-of-bounds write in FortiOS and FortiProxy SSL-VPN that is being exploited in the wild.",score:19,matched_terms:["fortinet","fortios","zero-day","actively exploited","exploited","cve-"],relevant:true},
@@ -285,9 +286,20 @@ function hit(s) { return !state.q || String(s).toLowerCase().includes(state.q); 
 function kevRows() { return data.kev.filter(k => inWindow(tsOf(k, "date_added")) && hit(`${k.cve_id} ${k.vendor} ${k.product} ${k.vuln_name}`)
   && (!state.chips.sev.size || state.chips.sev.has(sevOf(k) || "NA")) && (!state.chips.vendor.size || state.chips.vendor.has(k.matched_vendor))
   && (!state.chips.flags.has("ransomware") || k.ransomware === "Known") && (!state.chips.flags.has("new") || isNew(k.date_added))); }
-function watchRows() { const kevIds = new Set(data.kev.map(k => k.cve_id)); return data.watch.map(w => ({...w, in_kev: kevIds.has(w.cve_id)})).filter(w => inWindow(tsOf(w, "published_at")) && hit(`${w.cve_id} ${w.matched_vendor} ${w.description} ${(w.cpe_vendors||[]).join(" ")}`)
+function collapseBatches(rows) {
+  if (state.chips.flags.has("expand")) return rows;
+  const groups = {}, out = [];
+  for (const r of rows) { if (r.batch_key) (groups[r.batch_key] ||= []).push(r); else out.push(r); }
+  for (const [k, list] of Object.entries(groups)) {
+    const top = list.reduce((a, b) => (b.cvss_score > a.cvss_score ? b : a));
+    const [prod, ver] = k.split("@"); const name = prod.replace(/-/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+    out.push({ ...top, _batch: true, _n: list.length, _label: `${name} ${ver}`, description: `${name} release ${ver} fixes ${list.length} CVEs (highest ${top.cvss_severity} ${top.cvss_score}: ${top.cve_id}). Action: update ${name} to ${ver}.`, epss_score: Math.max(...list.map(x => x.epss_score || 0)) || null, in_kev: list.some(x => x.in_kev) });
+  }
+  return out;
+}
+function watchRows() { const kevIds = new Set(data.kev.map(k => k.cve_id)); return collapseBatches(data.watch.map(w => ({...w, in_kev: kevIds.has(w.cve_id)})).filter(w => inWindow(tsOf(w, "published_at")) && hit(`${w.cve_id} ${w.matched_vendor} ${w.description} ${(w.cpe_vendors||[]).join(" ")} ${w.batch_key||""}`)
   && (!state.chips.sev.size || state.chips.sev.has(sevOf(w) || "NA")) && (!state.chips.vendor.size || state.chips.vendor.has(w.matched_vendor))
-  && (!state.chips.flags.has("notkev") || !w.in_kev) && (!state.chips.flags.has("new") || isNew(w.published_at))); }
+  && (!state.chips.flags.has("notkev") || !w.in_kev) && (!state.chips.flags.has("new") || isNew(w.published_at)))); }
 function artRows() { return data.articles.filter(a => inWindow(tsOf(a, "published_at")) && hit(`${a.title} ${a.summary} ${(a.matched_terms||[]).join(" ")}`)
   && (!state.chips.source.size || state.chips.source.has(a.source)) && (!state.chips.flags.has("relevant") || a.relevant) && (!state.chips.flags.has("new") || isNew(a.published_at))); }
 
@@ -312,7 +324,7 @@ function buildChips() {
   }
   lbl("Flags"); add("flags", "new", "New (24 h)");
   if (state.tab === "kev" || state.tab === "overview") add("flags", "ransomware", "Ransomware known");
-  if (state.tab === "watch") add("flags", "notkev", "Not yet in KEV");
+  if (state.tab === "watch") { add("flags", "notkev", "Not yet in KEV"); add("flags", "expand", "Expand browser batches"); }
   if (state.tab === "articles") add("flags", "relevant", "Relevant only");
 }
 
@@ -330,7 +342,7 @@ function renderOverview(kev, watch, arts) {
   const rw = kev.filter(k => k.ransomware === "Known").length;
   const due7 = kev.filter(k => k.due_date && (new Date(k.due_date) - now()) < 7 * DAY && (new Date(k.due_date) - now()) > -DAY).length;
   const newKev = data.kev.filter(k => isNew(k.date_added)).length;
-  const newWatch = data.watch.filter(w => isNew(w.published_at)).length;
+  const newWatch = collapseBatches(data.watch.filter(w => isNew(w.published_at))).length;
   const crit = [...kev, ...watch].filter(r => sevOf(r) === "CRITICAL").length;
   const relevant = data.articles.filter(a => a.relevant && inWindow(tsOf(a, "published_at"))).length;
   const total = data.articles.filter(a => inWindow(tsOf(a, "published_at"))).length;
@@ -362,7 +374,7 @@ function renderOverview(kev, watch, arts) {
   const items = [...kev.map(k => ({ ...k, _src: "kev", _why: `${k.ransomware === "Known" ? "ransomware use known · " : ""}exploited (KEV) · due ${fmtD(k.due_date)}` })),
                  ...watch.filter(w => !w.in_kev).map(w => ({ ...w, _src: "watch", _why: `CVSS ${w.cvss_score} · EPSS ${w.epss_score == null ? "–" : (w.epss_score*100).toFixed(1) + "%"} · not in KEV` }))]
     .sort((a, b) => rank(b, b._src) - rank(a, a._src)).slice(0, 6);
-  $("#prio").innerHTML = items.length ? items.map(r => `<div class="prio-row">${sevHtml(r)}<div><a class="t" href="https://nvd.nist.gov/vuln/detail/${esc(r.cve_id)}" target="_blank" rel="noopener">${esc(r.cve_id)}</a> · ${esc(r.vendor || r.matched_vendor)}${r.product ? " " + esc(r.product) : ""}<div class="why">${esc(r.vuln_name || (r.description || "").slice(0, 120))} · ${esc(r._why)}</div></div><span class="pill ${r._src === "kev" ? "kev" : "muted"}">${r._src === "kev" ? "KEV" : "watch"}</span></div>`).join("") : `<div class="empty">Nothing in the current window.</div>`;
+  $("#prio").innerHTML = items.length ? items.map(r => `<div class="prio-row">${sevHtml(r)}<div>${r._batch ? `<span class="t">${esc(r._label)} <span class="pill muted">×${r._n}</span></span>` : `<a class="t" href="https://nvd.nist.gov/vuln/detail/${esc(r.cve_id)}" target="_blank" rel="noopener">${esc(r.cve_id)}</a>`} · ${esc(r.vendor || r.matched_vendor)}${r.product ? " " + esc(r.product) : ""}<div class="why">${esc(r.vuln_name || (r.description || "").slice(0, 120))} · ${esc(r._why)}</div></div><span class="pill ${r._src === "kev" ? "kev" : "muted"}">${r._src === "kev" ? "KEV" : "watch"}</span></div>`).join("") : `<div class="empty">Nothing in the current window.</div>`;
 }
 
 function tile(n, label, sub, cls) { return `<div class="tile ${cls}"><span class="label">${esc(label)}</span><span class="n">${esc(n)}</span><span class="sub">${esc(sub)}</span></div>`; }
@@ -398,9 +410,9 @@ function renderWatch(rows) {
   $("#watchCount").textContent = `${rows.length} shown`;
   t.tBodies[0].innerHTML = rows.length ? rows.map(w => `
     <tr>
-      <td class="mono"><a href="https://nvd.nist.gov/vuln/detail/${esc(w.cve_id)}" target="_blank" rel="noopener">${esc(w.cve_id)}</a>${isNew(w.published_at) ? ` <span class="pill new">new</span>` : ""}</td>
+      <td class="mono">${w._batch ? `<span class="t">${esc(w._label)}</span> <span class="pill muted">×${w._n}</span>` : `<a href="https://nvd.nist.gov/vuln/detail/${esc(w.cve_id)}" target="_blank" rel="noopener">${esc(w.cve_id)}</a>`}${isNew(w.published_at) ? ` <span class="pill new">new</span>` : ""}</td>
       <td>${sevHtml(w)}</td><td>${epssHtml(w)}</td>
-      <td><div class="t">${esc(w.matched_vendor)}</div><div class="s">${esc((w.cpe_vendors || []).slice(0, 3).join(", "))}</div></td>
+      <td><div class="t">${esc(w.matched_vendor)}</div><div class="s">${w._batch ? "release batch" : esc((w.cpe_vendors || []).slice(0, 3).join(", "))}</div></td>
       <td>${esc((w.description || "").slice(0, 220))}${(w.description || "").length > 220 ? "…" : ""}</td>
       <td class="mono">${fmtDT(w.published_at)}</td>
       <td>${w.in_kev ? `<span class="pill kev">in KEV</span>` : `<span class="pill muted">watch</span>`}</td></tr>`).join("")
