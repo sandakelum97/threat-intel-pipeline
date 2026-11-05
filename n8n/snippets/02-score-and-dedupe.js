@@ -2,14 +2,12 @@ const cfg = $('Config').first().json;
 const allow = cfg.VENDOR_ALLOWLIST.map(s => s.toLowerCase());
 const signals = Object.entries(cfg.SIGNAL_TERMS);
 
-const feedList = $('Feed list').all();
-const sourceFromFeed = (item) => {
-  const idx = item.pairedItem?.item ?? (Array.isArray(item.pairedItem) ? item.pairedItem[0]?.item : undefined);
-  return idx !== undefined ? feedList[idx]?.json?.source : undefined;
-};
+// NOTE: the Code node sandbox has no URL class, so parse the host with a regex.
 const sourceFromLink = (link) => {
   try {
-    const h = new URL(link).hostname.replace(/^www\./, '');
+    const m = String(link).match(/^https?:\/\/([^\/?#]+)/i);
+    if (!m) return 'unknown';
+    const h = m[1].toLowerCase().replace(/^www\./, '');
     if (h.includes('bleepingcomputer')) return 'BleepingComputer';
     if (h.includes('thehackernews')) return 'The Hacker News';
     if (h.includes('askwoody')) return 'AskWoody';
@@ -30,9 +28,14 @@ for (const item of $input.all()) {
   let link = j.link || j.guid || j.id;
   if (!link || seen.has(link)) continue;
   seen.add(link);
-  const source = sourceFromFeed(item) || sourceFromLink(link);
   // MSRC items sometimes carry a bare CVE id instead of a URL
   if (!/^https?:\/\//i.test(link) && /^CVE-\d{4}-\d+$/i.test(link)) link = `https://msrc.microsoft.com/update-guide/vulnerability/${link.toUpperCase()}`;
+  const source = sourceFromLink(link);
+
+  // Age filter: some feeds (MSRC) return their entire history; keep only recent items
+  const publishedRaw = j.isoDate || j.pubDate || null;
+  const publishedMs = publishedRaw ? Date.parse(publishedRaw) : NaN;
+  if (!isNaN(publishedMs) && publishedMs < Date.now() - (cfg.NEWS_MAX_AGE_DAYS || 7) * 86400000) continue;
 
   const title = strip(j.title);
   const summary = strip(j.contentSnippet || j.content || j.description || j['content:encoded']).slice(0, 600);
@@ -51,11 +54,10 @@ for (const item of $input.all()) {
   const noise = source === 'MSRC' && /^Chromium\b/i.test(title);
   if (noise) { score = 0; matched.push('chromium-edge-batch'); }
 
-  const published = j.isoDate || j.pubDate || null;
   rows.push({
     link, title,
     source,
-    published_at: published ? new Date(published).toISOString() : new Date().toISOString(),
+    published_at: !isNaN(publishedMs) ? new Date(publishedMs).toISOString() : new Date().toISOString(),
     summary,
     score,
     matched_terms: [...new Set(matched)],
