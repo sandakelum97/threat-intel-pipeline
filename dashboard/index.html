@@ -121,6 +121,8 @@ tr.rw td:first-child { box-shadow: inset 3px 0 0 var(--crit); }
 .pill.kev { color: var(--crit); }
 .pill.crit { color: var(--crit); } .pill.ok { color: var(--low); } .pill.muted { color: var(--muted); }
 .chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.ai { margin-top: 4px; padding: 6px 8px; border-left: 3px solid var(--accent); background: var(--accent-soft); border-radius: 3px; font-size: 13px; }
+.act { margin-top: 3px; color: var(--accent); font-weight: 500; }
 .kw { background: var(--chip); font-family: var(--mono); font-size: 11px; padding: 1px 6px; border-radius: 3px; }
 .kw.sig { background: transparent; border: 1px solid var(--line); }
 .empty { padding: 24px; color: var(--muted); text-align: center; }
@@ -166,6 +168,7 @@ footer { color: var(--muted); font-size: 12px; margin-top: 24px; }
     <div class="card"><h2>KEV additions in scope · per day</h2><div class="chartbox"><canvas id="cKev"></canvas></div></div>
     <div class="card"><h2>Severity mix · KEV + CVE Watch</h2><div class="chartbox"><canvas id="cSev"></canvas></div></div>
     <div class="card"><h2>Relevant articles · by source</h2><div class="chartbox"><canvas id="cSrc"></canvas></div></div>
+    <div class="card"><h2>Exposure by product · KEV + CVE Watch</h2><div class="chartbox"><canvas id="cProd"></canvas></div></div>
   </div>
   <div class="charts" style="grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));">
     <div class="card"><h2>Patch-first list · ranked by exploitation evidence then EPSS</h2><div class="prio" id="prio"></div></div>
@@ -176,25 +179,25 @@ footer { color: var(--muted); font-size: 12px; margin-top: 24px; }
 <section id="tab-kev" hidden>
   <div class="sect-head"><h2>Known Exploited Vulnerabilities in our stack</h2><span class="count" id="kevCount"></span></div>
   <div class="tablewrap"><table id="kev" data-sort="date_added" data-dir="desc">
-    <thead><tr><th class="mono" data-k="cve_id">CVE</th><th data-k="cvss_score">Severity</th><th data-k="epss_score">EPSS</th><th data-k="vendor">Vendor / product</th><th>Vulnerability</th><th class="mono" data-k="date_added">Added</th><th class="mono" data-k="due_date">Fed. due</th><th data-k="ransomware">Ransomware</th></tr></thead>
+    <thead><tr><th class="mono" data-k="cve_id">CVE</th><th data-k="cvss_score">Severity</th><th data-k="epss_score">EPSS</th><th data-k="product_group">Product</th><th>Vulnerability · summary</th><th class="mono" data-k="date_added">Added</th><th class="mono" data-k="due_date">Fed. due</th><th data-k="ransomware">Ransomware</th></tr></thead>
     <tbody></tbody></table></div>
 </section>
 
 <section id="tab-watch" hidden>
   <div class="sect-head"><h2>High-severity CVEs in our stack · NVD, CVSS ≥ 7</h2><span class="count" id="watchCount"></span></div>
   <div class="tablewrap"><table id="watch" data-sort="published_at" data-dir="desc">
-    <thead><tr><th class="mono" data-k="cve_id">CVE</th><th data-k="cvss_score">Severity</th><th data-k="epss_score">EPSS</th><th data-k="matched_vendor">Vendor</th><th>Description</th><th class="mono" data-k="published_at">Published</th><th>Status</th></tr></thead>
+    <thead><tr><th class="mono" data-k="cve_id">CVE</th><th data-k="cvss_score">Severity</th><th data-k="epss_score">EPSS</th><th data-k="product_group">Product</th><th>Description · summary</th><th class="mono" data-k="published_at">Published</th><th>Status</th></tr></thead>
     <tbody></tbody></table></div>
 </section>
 
 <section id="tab-articles" hidden>
   <div class="sect-head"><h2>Articles</h2><span class="count" id="artCount"></span></div>
   <div class="tablewrap"><table id="arts" data-sort="score" data-dir="desc">
-    <thead><tr><th class="mono" data-k="score">Score</th><th data-k="title">Title</th><th data-k="source">Source</th><th>Why it was kept</th><th class="mono" data-k="published_at">Published</th></tr></thead>
+    <thead><tr><th class="mono" data-k="score">Score</th><th data-k="title">Title · summary</th><th data-k="product_group">Product · source</th><th>Why it was kept</th><th class="mono" data-k="published_at">Published</th></tr></thead>
     <tbody></tbody></table></div>
 </section>
 
-<footer>Sources: CISA KEV · NVD · FIRST EPSS · CISA advisories · ASD ACSC · MSRC · Fortinet PSIRT · BleepingComputer · The Hacker News · AskWoody. Pipeline: n8n → Supabase → email / Teams.</footer>
+<footer>Summaries by Claude (Haiku). Sources: CISA KEV · NVD · FIRST EPSS · CISA advisories · ASD ACSC · MSRC · Fortinet PSIRT · BleepingComputer · The Hacker News · AskWoody. Pipeline: n8n → Supabase → email / Teams.</footer>
 </div>
 
 <script>
@@ -209,25 +212,25 @@ const now = () => Date.now();
 const iso = (d) => new Date(d).toISOString();
 const SAMPLE = {
   kev: [
-    {cve_id:"CVE-2026-20951",vendor:"Fortinet",product:"FortiOS, FortiProxy",vuln_name:"FortiOS SSL-VPN out-of-bounds write",date_added:iso(now()-1*DAY).slice(0,10),due_date:iso(now()+20*DAY).slice(0,10),ransomware:"Known",matched_vendor:"fortinet",cvss_score:9.8,cvss_severity:"CRITICAL",epss_score:0.912,epss_percentile:0.998},
-    {cve_id:"CVE-2026-19844",vendor:"Microsoft",product:"Windows",vuln_name:"Windows CLFS driver privilege escalation",date_added:iso(now()-1*DAY).slice(0,10),due_date:iso(now()+13*DAY).slice(0,10),ransomware:"Unknown",matched_vendor:"microsoft",cvss_score:7.8,cvss_severity:"HIGH",epss_score:0.21,epss_percentile:0.96},
-    {cve_id:"CVE-2026-18207",vendor:"Google",product:"Chromium V8",vuln_name:"Chromium V8 type confusion",date_added:iso(now()-3*DAY).slice(0,10),due_date:iso(now()+18*DAY).slice(0,10),ransomware:"Unknown",matched_vendor:"chrom",cvss_score:8.8,cvss_severity:"HIGH",epss_score:0.05,epss_percentile:0.89},
-    {cve_id:"CVE-2026-17110",vendor:"ConnectWise",product:"ScreenConnect",vuln_name:"ScreenConnect authentication bypass",date_added:iso(now()-6*DAY).slice(0,10),due_date:iso(now()+5*DAY).slice(0,10),ransomware:"Known",matched_vendor:"connectwise",cvss_score:10,cvss_severity:"CRITICAL",epss_score:0.97,epss_percentile:0.999},
-    {cve_id:"CVE-2026-16002",vendor:"Citrix",product:"NetScaler ADC and Gateway",vuln_name:"NetScaler memory overread",date_added:iso(now()-9*DAY).slice(0,10),due_date:iso(now()+2*DAY).slice(0,10),ransomware:"Unknown",matched_vendor:"citrix",cvss_score:7.5,cvss_severity:"HIGH",epss_score:0.62,epss_percentile:0.98},
-    {cve_id:"CVE-2025-54321",vendor:"Ivanti",product:"Connect Secure",vuln_name:"Ivanti Connect Secure missing authentication",date_added:iso(now()-15*DAY).slice(0,10),due_date:iso(now()-1*DAY).slice(0,10),ransomware:"Unknown",matched_vendor:"ivanti",cvss_score:9.1,cvss_severity:"CRITICAL",epss_score:0.44,epss_percentile:0.97},
-    {cve_id:"CVE-2025-50001",vendor:"Apple",product:"Multiple Products",vuln_name:"Apple WebKit memory corruption",date_added:iso(now()-22*DAY).slice(0,10),due_date:iso(now()-8*DAY).slice(0,10),ransomware:"Unknown",matched_vendor:"apple",cvss_score:null,cvss_severity:null,epss_score:null,epss_percentile:null}
+    {cve_id:"CVE-2026-20951",vendor:"Fortinet",product:"FortiOS, FortiProxy",vuln_name:"FortiOS SSL-VPN out-of-bounds write",date_added:iso(now()-1*DAY).slice(0,10),due_date:iso(now()+20*DAY).slice(0,10),ransomware:"Known",matched_vendor:"fortinet",product_group:"Fortinet",cvss_score:9.8,cvss_severity:"CRITICAL",epss_score:0.912,epss_percentile:0.998,ai_summary:"An unauthenticated attacker on the internet can send a crafted request to the SSL-VPN and run code on the firewall itself. Exploitation is confirmed and tied to ransomware crews.",ai_reason:"Patch every client FortiGate exposing SSL-VPN today; if you can't, disable SSL-VPN until patched."},
+    {cve_id:"CVE-2026-19844",vendor:"Microsoft",product:"Windows",vuln_name:"Windows CLFS driver privilege escalation",date_added:iso(now()-1*DAY).slice(0,10),due_date:iso(now()+13*DAY).slice(0,10),ransomware:"Unknown",matched_vendor:"microsoft",product_group:"Microsoft",cvss_score:7.8,cvss_severity:"HIGH",epss_score:0.21,epss_percentile:0.96,ai_summary:"A local attacker with a foothold can abuse the CLFS log driver to become SYSTEM. It's a post-exploitation step, commonly chained after phishing.",ai_reason:"Deploy this month's Windows cumulative update via RMM; prioritise servers and admin workstations."},
+    {cve_id:"CVE-2026-18207",vendor:"Google",product:"Chromium V8",vuln_name:"Chromium V8 type confusion",date_added:iso(now()-3*DAY).slice(0,10),due_date:iso(now()+18*DAY).slice(0,10),ransomware:"Unknown",matched_vendor:"chrom",product_group:"Google / Chrome",cvss_score:8.8,cvss_severity:"HIGH",epss_score:0.05,epss_percentile:0.89},
+    {cve_id:"CVE-2026-17110",vendor:"ConnectWise",product:"ScreenConnect",vuln_name:"ScreenConnect authentication bypass",date_added:iso(now()-6*DAY).slice(0,10),due_date:iso(now()+5*DAY).slice(0,10),ransomware:"Known",matched_vendor:"connectwise",product_group:"ConnectWise",cvss_score:10,cvss_severity:"CRITICAL",epss_score:0.97,epss_percentile:0.999},
+    {cve_id:"CVE-2026-16002",vendor:"Citrix",product:"NetScaler ADC and Gateway",vuln_name:"NetScaler memory overread",date_added:iso(now()-9*DAY).slice(0,10),due_date:iso(now()+2*DAY).slice(0,10),ransomware:"Unknown",matched_vendor:"citrix",product_group:"Citrix",cvss_score:7.5,cvss_severity:"HIGH",epss_score:0.62,epss_percentile:0.98},
+    {cve_id:"CVE-2025-54321",vendor:"Ivanti",product:"Connect Secure",vuln_name:"Ivanti Connect Secure missing authentication",date_added:iso(now()-15*DAY).slice(0,10),due_date:iso(now()-1*DAY).slice(0,10),ransomware:"Unknown",matched_vendor:"ivanti",product_group:"Ivanti",cvss_score:9.1,cvss_severity:"CRITICAL",epss_score:0.44,epss_percentile:0.97},
+    {cve_id:"CVE-2025-50001",vendor:"Apple",product:"Multiple Products",vuln_name:"Apple WebKit memory corruption",date_added:iso(now()-22*DAY).slice(0,10),due_date:iso(now()-8*DAY).slice(0,10),ransomware:"Unknown",matched_vendor:"apple",product_group:"Apple",cvss_score:null,cvss_severity:null,epss_score:null,epss_percentile:null}
   ],
   watch: [
-    {cve_id:"CVE-2026-30011",published_at:iso(now()-0.3*DAY),description:"Veeam Backup & Replication allows an authenticated user to execute arbitrary code via a crafted restore request.",cvss_score:8.8,cvss_severity:"HIGH",epss_score:0.012,epss_percentile:0.84,matched_vendor:"veeam",cpe_vendors:["veeam"]},
-    {cve_id:"CVE-2026-30020",published_at:iso(now()-0.8*DAY),description:"SonicWall SMA 1000 series: unauthenticated path traversal leading to file disclosure.",cvss_score:9.1,cvss_severity:"CRITICAL",epss_score:0.33,epss_percentile:0.97,matched_vendor:"sonicwall",cpe_vendors:["sonicwall"]},
-    {cve_id:"CVE-2026-29990",published_at:iso(now()-1.6*DAY),description:"Microsoft Exchange Server elevation of privilege via improper token validation.",cvss_score:7.5,cvss_severity:"HIGH",epss_score:0.004,epss_percentile:0.71,matched_vendor:"exchange",cpe_vendors:["microsoft"]},
-    {cve_id:"CVE-2026-20951",published_at:iso(now()-2*DAY),description:"Fortinet FortiOS SSL-VPN out-of-bounds write (also in KEV).",cvss_score:9.8,cvss_severity:"CRITICAL",epss_score:0.912,epss_percentile:0.998,matched_vendor:"fortinet",cpe_vendors:["fortinet"]},
-    ...[...Array(12)].map((_, i) => ({cve_id:`CVE-2026-1210${30+i}`,published_at:iso(now()-0.5*DAY),description:`Use after free in Prerender in Google Chrome prior to 157.0.8103.38 allowed a remote attacker to execute arbitrary code via a crafted HTML page. (${i+1})`,cvss_score:i?8.8:9.6,cvss_severity:i?"HIGH":"CRITICAL",epss_score:0.004,epss_percentile:0.6,matched_vendor:"chrome",cpe_vendors:["google"],batch_key:"google-chrome@157.0.8103.38"}))
+    {cve_id:"CVE-2026-30011",published_at:iso(now()-0.3*DAY),description:"Veeam Backup & Replication allows an authenticated user to execute arbitrary code via a crafted restore request.",cvss_score:8.8,cvss_severity:"HIGH",epss_score:0.012,epss_percentile:0.84,matched_vendor:"veeam",product_group:"Veeam",cpe_vendors:["veeam"],ai_summary:"Any authenticated Veeam user can trigger code execution on the backup server through a malformed restore request. Backup servers are a favourite ransomware target because they hold the recovery keys.",ai_reason:"Patch client Veeam servers this week and confirm they are not reachable from user VLANs."},
+    {cve_id:"CVE-2026-30020",published_at:iso(now()-0.8*DAY),description:"SonicWall SMA 1000 series: unauthenticated path traversal leading to file disclosure.",cvss_score:9.1,cvss_severity:"CRITICAL",epss_score:0.33,epss_percentile:0.97,matched_vendor:"sonicwall",product_group:"SonicWall",cpe_vendors:["sonicwall"]},
+    {cve_id:"CVE-2026-29990",published_at:iso(now()-1.6*DAY),description:"Microsoft Exchange Server elevation of privilege via improper token validation.",cvss_score:7.5,cvss_severity:"HIGH",epss_score:0.004,epss_percentile:0.71,matched_vendor:"exchange",product_group:"Microsoft",cpe_vendors:["microsoft"]},
+    {cve_id:"CVE-2026-20951",published_at:iso(now()-2*DAY),description:"Fortinet FortiOS SSL-VPN out-of-bounds write (also in KEV).",cvss_score:9.8,cvss_severity:"CRITICAL",epss_score:0.912,epss_percentile:0.998,matched_vendor:"fortinet",product_group:"Fortinet",cpe_vendors:["fortinet"]},
+    ...[...Array(12)].map((_, i) => ({cve_id:`CVE-2026-1210${30+i}`,published_at:iso(now()-0.5*DAY),description:`Use after free in Prerender in Google Chrome prior to 157.0.8103.38 allowed a remote attacker to execute arbitrary code via a crafted HTML page. (${i+1})`,cvss_score:i?8.8:9.6,cvss_severity:i?"HIGH":"CRITICAL",epss_score:0.004,epss_percentile:0.6,matched_vendor:"chrome",product_group:"Google / Chrome",cpe_vendors:["google"],batch_key:"google-chrome@157.0.8103.38"}))
   ],
   articles: [
-    {link:"https://www.bleepingcomputer.com/news/security/sample-1",title:"Fortinet warns of actively exploited FortiOS SSL-VPN zero-day",source:"BleepingComputer",published_at:iso(now()-0.4*DAY),summary:"Fortinet released emergency patches for an out-of-bounds write in FortiOS and FortiProxy SSL-VPN that is being exploited in the wild.",score:19,matched_terms:["fortinet","fortios","zero-day","actively exploited","exploited","cve-"],relevant:true},
-    {link:"https://www.cyber.gov.au/sample-2",title:"ACSC alert: ransomware actors targeting Australian managed service providers",source:"ASD ACSC",published_at:iso(now()-0.6*DAY),summary:"ASD's ACSC is aware of ransomware targeting Australian MSPs via exposed RMM tooling.",score:14,matched_terms:["ransomware","australian","msp","rmm"],relevant:true},
-    {link:"https://api.msrc.microsoft.com/sample-3",title:"CVE-2026-19844 Windows Common Log File System Driver Elevation of Privilege",source:"MSRC",published_at:iso(now()-0.9*DAY),summary:"Microsoft has confirmed exploitation. Patch Tuesday update available.",score:9,matched_terms:["microsoft","windows","exploited","cve-"],relevant:true},
+    {link:"https://www.bleepingcomputer.com/news/security/sample-1",title:"Fortinet warns of actively exploited FortiOS SSL-VPN zero-day",source:"BleepingComputer",published_at:iso(now()-0.4*DAY),summary:"Fortinet released emergency patches for an out-of-bounds write in FortiOS and FortiProxy SSL-VPN that is being exploited in the wild.",score:19,matched_terms:["fortinet","fortios","zero-day","actively exploited","exploited","cve-"],relevant:true,product_group:"Fortinet",ai_summary:"Fortinet has shipped emergency fixes for a memory-corruption bug in the SSL-VPN that attackers are already using to take over FortiGate firewalls.",ai_reason:"Directly affects most of our clients' edge; patch or disable SSL-VPN today."},
+    {link:"https://www.cyber.gov.au/sample-2",title:"ACSC alert: ransomware actors targeting Australian managed service providers",source:"ASD ACSC",published_at:iso(now()-0.6*DAY),summary:"ASD's ACSC is aware of ransomware targeting Australian MSPs via exposed RMM tooling.",score:14,matched_terms:["ransomware","australian","msp","rmm"],relevant:true,product_group:"General",ai_summary:"ACSC reports ransomware operators breaking into Australian MSPs through internet-exposed RMM consoles and using them to push payloads to every managed client.",ai_reason:"Confirm MFA and IP restrictions on our RMM consoles; review RMM admin logins for the last 30 days."},
+    {link:"https://api.msrc.microsoft.com/sample-3",title:"CVE-2026-19844 Windows Common Log File System Driver Elevation of Privilege",source:"MSRC",published_at:iso(now()-0.9*DAY),summary:"Microsoft has confirmed exploitation. Patch Tuesday update available.",score:9,matched_terms:["microsoft","windows","exploited","cve-"],relevant:true,product_group:"Microsoft"},
     {link:"https://thehackernews.com/sample-4",title:"New Linux botnet targets unpatched D-Link routers",source:"The Hacker News",published_at:iso(now()-1.2*DAY),summary:"A Mirai variant is spreading via old router flaws.",score:4,matched_terms:["linux","exploited"],relevant:true},
     {link:"https://www.askwoody.com/sample-5",title:"November Patch Tuesday: what to hold and what to install",source:"AskWoody",published_at:iso(now()-1.5*DAY),summary:"Monthly guidance on Windows and Office updates.",score:5,matched_terms:["windows","office","patch now"],relevant:true},
     {link:"https://api.msrc.microsoft.com/sample-6",title:"Chromium CVE-2026-76031: Use after free",source:"MSRC",published_at:iso(now()-1.1*DAY),summary:"Edge inherits this Chromium fix.",score:0,matched_terms:["chromium-edge-batch"],relevant:false},
@@ -293,8 +296,8 @@ function renderRuns() {
 
 function inWindow(ts) { return !state.days || ts >= now() - state.days * DAY; }
 function hit(s) { return !state.q || String(s).toLowerCase().includes(state.q); }
-function kevRows() { return data.kev.filter(k => inWindow(tsOf(k, "date_added")) && hit(`${k.cve_id} ${k.vendor} ${k.product} ${k.vuln_name}`)
-  && (!state.chips.sev.size || state.chips.sev.has(sevOf(k) || "NA")) && (!state.chips.vendor.size || state.chips.vendor.has(k.matched_vendor))
+function kevRows() { return data.kev.filter(k => inWindow(tsOf(k, "date_added")) && hit(`${k.cve_id} ${k.vendor} ${k.product} ${k.vuln_name} ${k.product_group||""} ${k.ai_summary||""}`)
+  && (!state.chips.sev.size || state.chips.sev.has(sevOf(k) || "NA")) && (!state.chips.vendor.size || state.chips.vendor.has(k.product_group || "Other"))
   && (!state.chips.flags.has("ransomware") || k.ransomware === "Known") && (!state.chips.flags.has("new") || isNew(k.date_added))); }
 function collapseBatches(rows) {
   if (state.chips.flags.has("expand")) return rows;
@@ -308,10 +311,10 @@ function collapseBatches(rows) {
   return out;
 }
 function watchRows() { const kevIds = new Set(data.kev.map(k => k.cve_id)); return collapseBatches(data.watch.map(w => ({...w, in_kev: kevIds.has(w.cve_id)})).filter(w => inWindow(tsOf(w, "published_at")) && hit(`${w.cve_id} ${w.matched_vendor} ${w.description} ${(w.cpe_vendors||[]).join(" ")} ${w.batch_key||""}`)
-  && (!state.chips.sev.size || state.chips.sev.has(sevOf(w) || "NA")) && (!state.chips.vendor.size || state.chips.vendor.has(w.matched_vendor))
+  && (!state.chips.sev.size || state.chips.sev.has(sevOf(w) || "NA")) && (!state.chips.vendor.size || state.chips.vendor.has(w.product_group || "Other"))
   && (!state.chips.flags.has("notkev") || !w.in_kev) && (!state.chips.flags.has("new") || isNew(w.published_at)))); }
 function artRows() { return data.articles.filter(a => inWindow(tsOf(a, "published_at")) && hit(`${a.title} ${a.summary} ${(a.matched_terms||[]).join(" ")}`)
-  && (!state.chips.source.size || state.chips.source.has(a.source)) && (!state.chips.flags.has("relevant") || a.relevant) && (!state.chips.flags.has("new") || isNew(a.published_at))); }
+  && (!state.chips.source.size || state.chips.source.has(a.source)) && (!state.chips.vendor.size || state.chips.vendor.has(a.product_group || "General")) && (!state.chips.flags.has("relevant") || a.relevant) && (!state.chips.flags.has("new") || isNew(a.published_at))); }
 
 function buildChips() {
   const row = $("#chipsRow"); row.innerHTML = "";
@@ -325,10 +328,12 @@ function buildChips() {
   if (state.tab === "kev" || state.tab === "watch" || state.tab === "overview") {
     lbl("Severity"); const pool = state.tab === "watch" ? data.watch : data.kev;
     for (const s of ["CRITICAL", "HIGH", "MEDIUM", "LOW"]) add("sev", s, s.charAt(0) + s.slice(1).toLowerCase(), pool.filter(r => sevOf(r) === s).length, `sev-${s}`);
-    lbl("Vendor"); const vc = {}; for (const r of pool) vc[r.matched_vendor] = (vc[r.matched_vendor] || 0) + 1;
-    Object.entries(vc).sort((a, b) => b[1] - a[1]).slice(0, 10).forEach(([v, c]) => add("vendor", v, v, c));
+    lbl("Product"); const vc = {}; for (const r of pool) { const g = r.product_group || "Other"; vc[g] = (vc[g] || 0) + 1; }
+    Object.entries(vc).sort((a, b) => b[1] - a[1]).slice(0, 12).forEach(([v, c]) => add("vendor", v, v, c));
   }
   if (state.tab === "articles") {
+    lbl("Product"); const pc = {}; for (const a of data.articles) if (a.relevant) { const g = a.product_group || "General"; pc[g] = (pc[g] || 0) + 1; }
+    Object.entries(pc).sort((a, b) => b[1] - a[1]).slice(0, 12).forEach(([v, c]) => add("vendor", v, v, c));
     lbl("Source"); const sc = {}; for (const a of data.articles) sc[a.source] = (sc[a.source] || 0) + 1;
     Object.entries(sc).sort((a, b) => b[1] - a[1]).forEach(([s, c]) => add("source", s, s, c));
   }
@@ -379,6 +384,11 @@ function renderOverview(kev, watch, arts) {
   chart("cSrc", "bar", { labels: se.map(e => e[0]), datasets: [{ data: se.map(e => e[1]), backgroundColor: cssVar("--info"), borderRadius: 3 }] },
     { indexAxis: "y", scales: { x: { beginAtZero: true, ticks: { precision: 0 } } } });
 
+  // Exposure by product
+  const pc = {}; for (const r of [...kev, ...watch]) { const g = r.product_group || "Other"; pc[g] = (pc[g] || 0) + (r._n || 1); }
+  const pe = Object.entries(pc).sort((a, b) => b[1] - a[1]).slice(0, 10);
+  chart("cProd", "bar", { labels: pe.map(e => e[0]), datasets: [{ data: pe.map(e => e[1]), backgroundColor: cssVar("--high"), borderRadius: 3 }] },
+    { indexAxis: "y", scales: { x: { beginAtZero: true, ticks: { precision: 0 } } } });
   // Priority list: KEV ransomware → KEV by EPSS → watch by EPSS
   const rank = (r, src) => (src === "kev" ? 1000 : 0) + (r.ransomware === "Known" ? 500 : 0) + (r.epss_score || 0) * 100 + (r.cvss_score || 0);
   const items = [...kev.map(k => ({ ...k, _src: "kev", _why: `${k.ransomware === "Known" ? "ransomware use known · " : ""}exploited (KEV) · due ${fmtD(k.due_date)}` })),
@@ -393,8 +403,8 @@ function renderStories(arts) {
   $("#storiesCount").textContent = top.length ? `${top.length} of ${arts.filter(a => a.relevant).length}` : "";
   $("#stories").innerHTML = top.length ? top.map(a => `<div class="story">
     <div class="hd"><a href="${esc(a.link)}" target="_blank" rel="noopener">${esc(a.title)}</a><span class="score">${a.score}</span>${isNew(a.published_at) ? `<span class="pill new">new</span>` : ""}</div>
-    <div class="meta">${esc(a.source)} · ${fmtDT(a.published_at)}</div>
-    <div class="sum">${esc(clip(a.summary || "", 260))}</div>
+    <div class="meta">${esc(a.product_group || "General")} · ${esc(a.source)} · ${fmtDT(a.published_at)}</div>
+    <div class="sum">${a.ai_summary ? esc(a.ai_summary) : esc(clip(a.summary || "", 260))}</div>${a.ai_reason ? `<div class="act">→ ${esc(a.ai_reason)}</div>` : ""}
     <div class="chips">${(a.matched_terms || []).slice(0, 6).map(k => `<span class="kw ${SIGNALS.has(k) ? "sig" : ""}">${esc(k)}</span>`).join("")}</div>
   </div>`).join("") : `<div class="empty">No relevant articles in the current window.</div>`;
 }
@@ -422,8 +432,8 @@ function renderKev(rows) {
     <tr class="${k.ransomware === "Known" ? "rw" : ""}">
       <td class="mono"><a href="https://nvd.nist.gov/vuln/detail/${esc(k.cve_id)}" target="_blank" rel="noopener">${esc(k.cve_id)}</a>${isNew(k.date_added) ? ` <span class="pill new">new</span>` : ""}</td>
       <td>${sevHtml(k)}</td><td>${epssHtml(k)}</td>
-      <td><div class="t">${esc(k.vendor)}</div><div class="s">${esc(k.product)}</div></td>
-      <td>${esc(k.vuln_name)}<div class="s">matched: <span class="kw">${esc(k.matched_vendor)}</span></div></td>
+      <td><div class="t">${esc(k.product_group || "Other")}</div><div class="s">${esc(k.vendor)} ${esc(k.product)}</div></td>
+      <td><div class="t">${esc(k.vuln_name)}</div>${k.ai_summary ? `<div class="ai">${esc(k.ai_summary)}${k.ai_reason ? `<div class="act">→ ${esc(k.ai_reason)}</div>` : ""}</div>` : `<div class="s">${esc((k.description || "").slice(0, 160))}</div>`}</td>
       <td class="mono">${fmtD(k.date_added)}</td><td class="mono">${fmtD(k.due_date)}</td>
       <td>${k.ransomware === "Known" ? `<span class="pill crit">Known</span>` : `<span class="pill muted">Unknown</span>`}</td></tr>`).join("")
     : `<tr><td colspan="8" class="empty">No KEV entries match.</td></tr>`;
@@ -435,8 +445,8 @@ function renderWatch(rows) {
     <tr>
       <td class="mono">${w._batch ? `<span class="t">${esc(w._label)}</span> <span class="pill muted">×${w._n}</span>` : `<a href="https://nvd.nist.gov/vuln/detail/${esc(w.cve_id)}" target="_blank" rel="noopener">${esc(w.cve_id)}</a>`}${isNew(w.published_at) ? ` <span class="pill new">new</span>` : ""}</td>
       <td>${sevHtml(w)}</td><td>${epssHtml(w)}</td>
-      <td><div class="t">${esc(w.matched_vendor)}</div><div class="s">${w._batch ? "release batch" : esc((w.cpe_vendors || []).slice(0, 3).join(", "))}</div></td>
-      <td>${esc((w.description || "").slice(0, 220))}${(w.description || "").length > 220 ? "…" : ""}</td>
+      <td><div class="t">${esc(w.product_group || "Other")}</div><div class="s">${w._batch ? "release batch" : esc(w.matched_vendor)}</div></td>
+      <td>${w.ai_summary ? `<div class="ai">${esc(w.ai_summary)}${w.ai_reason ? `<div class="act">→ ${esc(w.ai_reason)}</div>` : ""}</div><div class="s">${esc((w.description || "").slice(0, 140))}…</div>` : `${esc((w.description || "").slice(0, 220))}${(w.description || "").length > 220 ? "…" : ""}${w.ai_reason ? `<div class="act">→ ${esc(w.ai_reason)}</div>` : ""}`}</td>
       <td class="mono">${fmtDT(w.published_at)}</td>
       <td>${w.in_kev ? `<span class="pill kev">in KEV</span>` : `<span class="pill muted">watch</span>`}</td></tr>`).join("")
     : `<tr><td colspan="7" class="empty">No CVEs match. (TI 04 populates this table.)</td></tr>`;
@@ -447,8 +457,8 @@ function renderArts(rows) {
   t.tBodies[0].innerHTML = rows.length ? rows.map(a => `
     <tr>
       <td class="mono"><span class="t">${a.score}</span> ${a.relevant ? `<span class="pill ok">kept</span>` : `<span class="pill muted">dropped</span>`}</td>
-      <td><div class="t"><a href="${esc(a.link)}" target="_blank" rel="noopener">${esc(a.title)}</a>${isNew(a.published_at) ? ` <span class="pill new">new</span>` : ""}</div><div class="s">${esc((a.summary || "").slice(0, 180))}</div></td>
-      <td>${esc(a.source)}</td>
+      <td><div class="t"><a href="${esc(a.link)}" target="_blank" rel="noopener">${esc(a.title)}</a>${isNew(a.published_at) ? ` <span class="pill new">new</span>` : ""}</div>${a.ai_summary ? `<div class="ai">${esc(a.ai_summary)}${a.ai_reason ? `<div class="act">→ ${esc(a.ai_reason)}</div>` : ""}</div>` : `<div class="s">${esc((a.summary || "").slice(0, 180))}</div>`}</td>
+      <td><div class="t">${esc(a.product_group || (a.relevant ? "General" : "–"))}</div><div class="s">${esc(a.source)}</div></td>
       <td><div class="chips">${(a.matched_terms || []).map(k => `<span class="kw ${SIGNALS.has(k) ? "sig" : ""}">${esc(k)}</span>`).join("") || `<span class="s">no matches</span>`}</div>${a.ai_reason ? `<div class="s">AI: ${esc(a.ai_reason)}</div>` : ""}</td>
       <td class="mono">${fmtDT(a.published_at)}</td></tr>`).join("")
     : `<tr><td colspan="5" class="empty">No articles match.</td></tr>`;

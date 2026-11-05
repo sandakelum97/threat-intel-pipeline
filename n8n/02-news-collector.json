@@ -12,7 +12,7 @@
           ]
         }
       },
-      "id": "619fcb1f-8e59-4d7d-938d-7761a80e9d47",
+      "id": "57baedbd-8f8c-4db3-a1c6-5c0c6c4c71ee",
       "name": "Schedule",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
@@ -23,10 +23,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// ====== DEMO CONFIG \u2013 move these to n8n Credentials / Variables before production ======\nreturn [{\n  json: {\n    SUPABASE_URL: \"https://YOUR-PROJECT.supabase.co\",\n    SUPABASE_SERVICE_KEY: \"YOUR-SERVICE-ROLE-KEY\",      // server-side only, never in the dashboard\n    TEAMS_WEBHOOK: \"https://YOUR-TENANT.webhook.office.com/webhookb2/....\",\n    DASHBOARD_URL: \"https://your-dashboard-url/\",      // linked at the bottom of every email/card\n    EMAIL_TO: \"tharakajce.97@gmail.com\",                       // comma-separated list for the team digest\n    EMAIL_FROM: \"Threat Intel <tharakajce.97@gmail.com>\",        // must match the SMTP credential account\n\n    // Vendors/products in client environments. Case-insensitive substring match on\n    // vendorProject + product (KEV) and title + summary (news).\n    VENDOR_ALLOWLIST: [\n      \"Microsoft\",\"Windows\",\"Exchange\",\"SharePoint\",\"Office\",\"Entra\",\"Azure\",\"Intune\",\n      \"Fortinet\",\"FortiGate\",\"FortiOS\",\"FortiManager\",\"FortiAnalyzer\",\"FortiClient\",\n      \"ConnectWise\",\"ScreenConnect\",\"NinjaOne\",\"Ninja RMM\",\n      \"Cisco\",\"Ivanti\",\"Citrix\",\"NetScaler\",\"VMware\",\"Broadcom\",\"Veeam\",\"SonicWall\",\n      \"Palo Alto\",\"PAN-OS\",\"GlobalProtect\",\"Apple\",\"iOS\",\"macOS\",\"Google\",\"Chrome\",\"Chromium\",\n      \"Mozilla\",\"Firefox\",\"Adobe\",\"Acrobat\",\"Atlassian\",\"Confluence\",\"Jira\",\"Oracle\",\n      \"SolarWinds\",\"Zoho\",\"ManageEngine\",\"Synology\",\"QNAP\",\"Ubiquiti\",\"UniFi\",\n      \"Dell\",\"Lenovo\",\"Progress\",\"MOVEit\",\"GitLab\",\"Jenkins\",\"OpenSSL\",\"Linux\",\"Ubuntu\",\n      \"Samba\",\"PaperCut\",\"Kaseya\",\"CrowdStrike\",\"Proofpoint\",\"ThreatLocker\",\"7-Zip\",\"WinRAR\",\n      \"Auvik\",\"Proxmox\",\"Hyper-V\",\"SQL Server\",\"Teams\",\"OneDrive\",\"Outlook\",\"Defender\"\n    ],\n\n    // High-signal phrases for news scoring (weight added to score)\n    SIGNAL_TERMS: {\n      \"zero-day\": 3, \"0-day\": 3, \"actively exploited\": 3, \"in the wild\": 3,\n      \"exploited\": 2, \"ransomware\": 2, \"critical\": 1, \"rce\": 2, \"remote code execution\": 2,\n      \"authentication bypass\": 2, \"patch now\": 2, \"emergency\": 2, \"out-of-band\": 2,\n      \"cve-\": 1, \"australia\": 2, \"australian\": 2, \"msp\": 2, \"mssp\": 2, \"rmm\": 2,\n      \"supply chain\": 1, \"phishing\": 1, \"data breach\": 1\n    },\n    MIN_SCORE: 3,                 // article is \"relevant\" at or above this\n    NEWS_MAX_AGE_DAYS: 7,         // ignore feed items older than this (MSRC feed returns its whole history)\n    KEV_LOOKBACK_DAYS: 14,        // on first run, only notify about KEV entries this recent\n    AI_ENABLED: false,            // flip to true once ANTHROPIC key is set in the AI node\n\n    // CVE Watch / enrichment (TI 04, TI 05)\n    NVD_API_KEY: \"YOUR-NVD-API-KEY\",   // https://nvd.nist.gov/developers/request-an-api-key\n    CVSS_MIN: 7.0,                     // CVE Watch keeps CVEs at or above this base score\n    CVE_LOOKBACK_HOURS: 48,            // NVD publication window per run\n    ENRICH_BATCH: 60                   // KEV rows enriched per TI 05 run\n  }\n}];",
+        "jsCode": "// ====== DEMO CONFIG \u2013 move secrets to n8n Credentials before production ======\nconst PRODUCT_GROUPS = {\n  // group name           : terms matched (case-insensitive) in KEV vendor/product, NVD CPE/description, article text\n  \"Microsoft\":            [\"Microsoft\",\"Windows\",\"Exchange\",\"SharePoint\",\"Office\",\"Entra\",\"Azure\",\"Intune\",\"Hyper-V\",\"SQL Server\",\"Teams\",\"OneDrive\",\"Outlook\",\"Defender\"],\n  \"Fortinet\":             [\"Fortinet\",\"FortiGate\",\"FortiOS\",\"FortiManager\",\"FortiAnalyzer\",\"FortiClient\"],\n  \"ConnectWise\":          [\"ConnectWise\",\"ScreenConnect\"],\n  \"NinjaOne\":             [\"NinjaOne\",\"Ninja RMM\"],\n  \"Cisco\":                [\"Cisco\"],\n  \"Ivanti\":               [\"Ivanti\"],\n  \"Citrix\":               [\"Citrix\",\"NetScaler\"],\n  \"VMware\":               [\"VMware\",\"Broadcom\"],\n  \"Veeam\":                [\"Veeam\"],\n  \"SonicWall\":            [\"SonicWall\"],\n  \"Palo Alto\":            [\"Palo Alto\",\"PAN-OS\",\"GlobalProtect\"],\n  \"Apple\":                [\"Apple\",\"iOS\",\"macOS\"],\n  \"Google / Chrome\":      [\"Google\",\"Chrome\",\"Chromium\"],\n  \"Mozilla\":              [\"Mozilla\",\"Firefox\"],\n  \"Adobe\":                [\"Adobe\",\"Acrobat\"],\n  \"Atlassian\":            [\"Atlassian\",\"Confluence\",\"Jira\"],\n  \"Oracle\":               [\"Oracle\"],\n  \"SolarWinds\":           [\"SolarWinds\"],\n  \"ManageEngine\":         [\"Zoho\",\"ManageEngine\"],\n  \"NAS\":                  [\"Synology\",\"QNAP\"],\n  \"Ubiquiti\":             [\"Ubiquiti\",\"UniFi\"],\n  \"Hardware OEM\":         [\"Dell\",\"Lenovo\"],\n  \"Progress / MOVEit\":    [\"Progress\",\"MOVEit\"],\n  \"DevOps\":               [\"GitLab\",\"Jenkins\"],\n  \"Linux / OSS\":          [\"OpenSSL\",\"Linux\",\"Ubuntu\",\"Samba\"],\n  \"PaperCut\":             [\"PaperCut\"],\n  \"Kaseya\":               [\"Kaseya\"],\n  \"Security tools\":       [\"CrowdStrike\",\"Proofpoint\",\"ThreatLocker\",\"Auvik\"],\n  \"Archivers\":            [\"7-Zip\",\"WinRAR\"],\n  \"Proxmox\":              [\"Proxmox\"],\n};\nreturn [{\n  json: {\n    SUPABASE_URL: \"https://YOUR-PROJECT.supabase.co\",\n    SUPABASE_SERVICE_KEY: \"YOUR-SERVICE-ROLE-KEY\",      // server-side only, never in the dashboard\n    TEAMS_WEBHOOK: \"https://YOUR-TENANT.webhook.office.com/webhookb2/....\",\n    DASHBOARD_URL: \"https://your-dashboard-url/\",      // linked at the bottom of every email/card\n    EMAIL_TO: \"tharakajce.97@gmail.com\",                       // comma-separated list for the team digest\n    EMAIL_FROM: \"Threat Intel <tharakajce.97@gmail.com>\",        // must match the SMTP credential account\n\n    PRODUCT_GROUPS,\n    VENDOR_ALLOWLIST: Object.values(PRODUCT_GROUPS).flat(),\n\n    // High-signal phrases for news scoring (weight added to score)\n    SIGNAL_TERMS: {\n      \"zero-day\": 3, \"0-day\": 3, \"actively exploited\": 3, \"in the wild\": 3,\n      \"exploited\": 2, \"ransomware\": 2, \"critical\": 1, \"rce\": 2, \"remote code execution\": 2,\n      \"authentication bypass\": 2, \"patch now\": 2, \"emergency\": 2, \"out-of-band\": 2,\n      \"cve-\": 1, \"australia\": 2, \"australian\": 2, \"msp\": 2, \"mssp\": 2, \"rmm\": 2,\n      \"supply chain\": 1, \"phishing\": 1, \"data breach\": 1\n    },\n    MIN_SCORE: 3,                 // article is \"relevant\" at or above this\n    NEWS_MAX_AGE_DAYS: 7,         // ignore feed items older than this (MSRC feed returns its whole history)\n    KEV_LOOKBACK_DAYS: 14,        // on first run, only notify about KEV entries this recent\n\n    // CVE Watch / enrichment (TI 04, TI 05)\n    NVD_API_KEY: \"YOUR-NVD-API-KEY\",   // https://nvd.nist.gov/developers/request-an-api-key\n    CVSS_MIN: 7.0,                     // CVE Watch keeps CVEs at or above this base score\n    CVE_LOOKBACK_HOURS: 48,            // NVD publication window per run\n    ENRICH_BATCH: 60,                  // KEV rows enriched per TI 05 run\n\n    // AI summaries (Claude). Credential \"Anthropic account\" is selected on the Claude nodes.\n    AI_ENABLED: true,\n    AI_MODEL: \"claude-haiku-5-5\",\n    AI_MAX_PER_RUN: 25,\n    AI_CONTEXT: \"We are an Australian MSSP running Microsoft 365/Defender XDR/Sentinel/Entra, Fortinet (FortiGate/FortiManager/FortiAnalyzer), ConnectWise and NinjaOne RMM, CrowdStrike Falcon, Proofpoint, ThreatLocker, Nessus and Auvik across ~50 SMB client tenants.\"\n  }\n}];",
         "mode": "runOnceForAllItems"
       },
-      "id": "95df3ccf-d23b-408f-a8ef-3d179e37d13a",
+      "id": "36761f25-f815-443d-8a7d-ef17cad76766",
       "name": "Config",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -37,10 +37,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// One item per feed. Source label is derived from the hostname later, so this list is all you edit.\nconst feeds = [\n  [\"BleepingComputer\", \"https://www.bleepingcomputer.com/feed/\"],\n  [\"The Hacker News\",  \"https://feeds.feedburner.com/TheHackersNews\"],\n  [\"AskWoody\",         \"https://www.askwoody.com/feed/\"],\n  [\"ASD ACSC\",         \"https://www.cyber.gov.au/rss/alerts\"],\n  [\"ASD ACSC\",         \"https://www.cyber.gov.au/rss/advisories\"],\n  [\"CISA\",             \"https://www.cisa.gov/cybersecurity-advisories/cybersecurity-advisories.xml\"],\n  [\"MSRC\",             \"https://api.msrc.microsoft.com/update-guide/rss\"],\n  [\"Fortinet PSIRT\",   \"https://filestore.fortinet.com/fortiguard/rss/ir.xml\"],\n];\nreturn feeds.map(([source, url]) => ({ json: { source, url } }));",
+        "jsCode": "const feeds = [\n  [\"BleepingComputer\", \"https://www.bleepingcomputer.com/feed/\"],\n  [\"The Hacker News\",  \"https://feeds.feedburner.com/TheHackersNews\"],\n  [\"AskWoody\",         \"https://www.askwoody.com/feed/\"],\n  [\"ASD ACSC\",         \"https://www.cyber.gov.au/rss/alerts\"],\n  [\"ASD ACSC\",         \"https://www.cyber.gov.au/rss/advisories\"],\n  [\"CISA\",             \"https://www.cisa.gov/cybersecurity-advisories/cybersecurity-advisories.xml\"],\n  [\"MSRC\",             \"https://api.msrc.microsoft.com/update-guide/rss\"],\n  [\"Fortinet PSIRT\",   \"https://filestore.fortinet.com/fortiguard/rss/ir.xml\"],\n];\nreturn feeds.map(([source, url]) => ({ json: { source, url } }));",
         "mode": "runOnceForAllItems"
       },
-      "id": "9f3cb62a-7c5e-4762-8161-b6dc6b01ab1b",
+      "id": "c88dbee8-525b-4e1f-b0ee-b2ab294d0bb6",
       "name": "Feed list",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -56,7 +56,7 @@
           "ignoreSSL": false
         }
       },
-      "id": "160728b3-eac2-4d89-acc3-5faf762e6ac7",
+      "id": "a4601ddf-078b-42b1-9832-d94e568ce67b",
       "name": "Read RSS",
       "type": "n8n-nodes-base.rssFeedRead",
       "typeVersion": 1.1,
@@ -68,10 +68,10 @@
     },
     {
       "parameters": {
-        "jsCode": "const cfg = $('Config').first().json;\nconst allow = cfg.VENDOR_ALLOWLIST.map(s => s.toLowerCase());\nconst signals = Object.entries(cfg.SIGNAL_TERMS);\n\n// NOTE: the Code node sandbox has no URL class, so parse the host with a regex.\nconst sourceFromLink = (link) => {\n  try {\n    const m = String(link).match(/^https?:\\/\\/([^\\/?#]+)/i);\n    if (!m) return 'unknown';\n    const h = m[1].toLowerCase().replace(/^www\\./, '');\n    if (h.includes('bleepingcomputer')) return 'BleepingComputer';\n    if (h.includes('thehackernews')) return 'The Hacker News';\n    if (h.includes('askwoody')) return 'AskWoody';\n    if (h.includes('cyber.gov.au')) return 'ASD ACSC';\n    if (h.includes('cisa.gov')) return 'CISA';\n    if (h.includes('msrc') || h.includes('microsoft.com')) return 'MSRC';\n    if (h.includes('fortiguard') || h.includes('fortinet')) return 'Fortinet PSIRT';\n    return h;\n  } catch { return 'unknown'; }\n};\n\nconst strip = (s) => (s || '').replace(/<[^>]+>/g, ' ').replace(/\\s+/g, ' ').trim();\nconst seen = new Set();\nconst rows = [];\n\nfor (const item of $input.all()) {\n  const j = item.json || {};\n  let link = j.link || j.guid || j.id;\n  if (!link || seen.has(link)) continue;\n  seen.add(link);\n  // MSRC items sometimes carry a bare CVE id instead of a URL\n  if (!/^https?:\\/\\//i.test(link) && /^CVE-\\d{4}-\\d+$/i.test(link)) link = `https://msrc.microsoft.com/update-guide/vulnerability/${link.toUpperCase()}`;\n  const source = sourceFromLink(link);\n\n  // Age filter: some feeds (MSRC) return their entire history; keep only recent items\n  const publishedRaw = j.isoDate || j.pubDate || null;\n  const publishedMs = publishedRaw ? Date.parse(publishedRaw) : NaN;\n  if (!isNaN(publishedMs) && publishedMs < Date.now() - (cfg.NEWS_MAX_AGE_DAYS || 7) * 86400000) continue;\n\n  const title = strip(j.title);\n  const summary = strip(j.contentSnippet || j.content || j.description || j['content:encoded']).slice(0, 600);\n  const hay = `${title} ${summary}`.toLowerCase();\n\n  const matched = [];\n  let score = 0;\n  for (const a of allow) if (hay.includes(a)) { matched.push(a); score += 2; }\n  for (const [term, w] of signals) if (hay.includes(term)) { matched.push(term); score += w; }\n  // a vendor hit in the TITLE is a strong signal\n  const t = title.toLowerCase();\n  if (allow.some(a => t.includes(a))) score += 2;\n\n  // Noise rule: MSRC republishes every Chromium CVE (Edge inherits them). Action is always \"update Edge\",\n  // so keep them stored but out of the digest.\n  const noise = source === 'MSRC' && /^Chromium\\b/i.test(title);\n  if (noise) { score = 0; matched.push('chromium-edge-batch'); }\n\n  rows.push({\n    link, title,\n    source,\n    published_at: !isNaN(publishedMs) ? new Date(publishedMs).toISOString() : new Date().toISOString(),\n    summary,\n    score,\n    matched_terms: [...new Set(matched)],\n    relevant: score >= cfg.MIN_SCORE,\n  });\n}\nif (rows.length === 0) return [];\nreturn [{ json: { rows, fetched: $input.all().length, unique: rows.length,\n                  relevant: rows.filter(r => r.relevant).length } }];",
+        "jsCode": "const cfg = $('Config').first().json;\nconst groupOf = (term) => {\n  const t = String(term || '').toLowerCase();\n  for (const [g, terms] of Object.entries(cfg.PRODUCT_GROUPS)) if (terms.some(x => x.toLowerCase() === t)) return g;\n  return 'Other';\n};\n\nconst allow = cfg.VENDOR_ALLOWLIST.map(s => s.toLowerCase());\nconst signals = Object.entries(cfg.SIGNAL_TERMS);\n// NOTE: the Code node sandbox has no URL class, so parse the host with a regex.\nconst sourceFromLink = (link) => {\n  try {\n    const m = String(link).match(/^https?:\\/\\/([^\\/?#]+)/i);\n    if (!m) return 'unknown';\n    const h = m[1].toLowerCase().replace(/^www\\./, '');\n    if (h.includes('bleepingcomputer')) return 'BleepingComputer';\n    if (h.includes('thehackernews')) return 'The Hacker News';\n    if (h.includes('askwoody')) return 'AskWoody';\n    if (h.includes('cyber.gov.au')) return 'ASD ACSC';\n    if (h.includes('cisa.gov')) return 'CISA';\n    if (h.includes('msrc') || h.includes('microsoft.com')) return 'MSRC';\n    if (h.includes('fortiguard') || h.includes('fortinet')) return 'Fortinet PSIRT';\n    return h;\n  } catch { return 'unknown'; }\n};\nconst strip = (s) => (s || '').replace(/<[^>]+>/g, ' ').replace(/\\s+/g, ' ').trim();\nconst seen = new Set();\nconst rows = [];\nfor (const item of $input.all()) {\n  const j = item.json || {};\n  let link = j.link || j.guid || j.id;\n  if (!link || seen.has(link)) continue;\n  seen.add(link);\n  if (!/^https?:\\/\\//i.test(link) && /^CVE-\\d{4}-\\d+$/i.test(link)) link = `https://msrc.microsoft.com/update-guide/vulnerability/${link.toUpperCase()}`;\n  const source = sourceFromLink(link);\n  const publishedRaw = j.isoDate || j.pubDate || null;\n  const publishedMs = publishedRaw ? Date.parse(publishedRaw) : NaN;\n  if (!isNaN(publishedMs) && publishedMs < Date.now() - (cfg.NEWS_MAX_AGE_DAYS || 7) * 86400000) continue;\n  const title = strip(j.title);\n  const summary = strip(j.contentSnippet || j.content || j.description || j['content:encoded']).slice(0, 600);\n  const hay = `${title} ${summary}`.toLowerCase();\n  const matched = []; let score = 0; let firstVendor = null;\n  for (const a of allow) if (hay.includes(a)) { matched.push(a); score += 2; if (!firstVendor) firstVendor = a; }\n  for (const [term, w] of signals) if (hay.includes(term)) { matched.push(term); score += w; }\n  const t = title.toLowerCase();\n  const titleVendor = allow.find(a => t.includes(a));\n  if (titleVendor) { score += 2; firstVendor = titleVendor; }\n  const noise = source === 'MSRC' && /^Chromium\\b/i.test(title);\n  if (noise) { score = 0; matched.push('chromium-edge-batch'); }\n  rows.push({ link, title, source, published_at: !isNaN(publishedMs) ? new Date(publishedMs).toISOString() : new Date().toISOString(),\n    summary, score, matched_terms: [...new Set(matched)], relevant: score >= cfg.MIN_SCORE,\n    product_group: firstVendor ? groupOf(firstVendor) : (score >= cfg.MIN_SCORE ? 'General' : null) });\n}\nif (rows.length === 0) return [];\nreturn [{ json: { rows, fetched: $input.all().length, unique: rows.length, relevant: rows.filter(r => r.relevant).length } }];",
         "mode": "runOnceForAllItems"
       },
-      "id": "c341cc00-58b3-4bea-b76f-226643cb23d5",
+      "id": "f95a9671-9ae7-44a2-9693-66b1f66da864",
       "name": "Score & dedupe",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -112,7 +112,7 @@
           "timeout": 60000
         }
       },
-      "id": "7c2e7cd9-35a0-478b-9f9f-5f962248db43",
+      "id": "9c2509f5-b79c-45e1-a8cf-ab5a3e2e69fc",
       "name": "Upsert articles",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -153,7 +153,7 @@
           "timeout": 60000
         }
       },
-      "id": "433bfefc-4f27-4384-b71c-191f58d1ea46",
+      "id": "a31b0eba-ce13-47f5-a435-835f97e9cc08",
       "name": "Log run",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -161,59 +161,6 @@
         1100,
         300
       ],
-      "onError": "continueRegularOutput"
-    },
-    {
-      "parameters": {
-        "jsCode": "// ===== OPTIONAL AI RELEVANCY CHECK (disabled) =====\n// When cfg.AI_ENABLED is true, this node prepares one request per relevant article for the\n// \"Claude relevancy check\" HTTP node. Leave disabled for keyword-only mode.\nconst cfg = $('Config').first().json;\nif (!cfg.AI_ENABLED) return [];\nconst rows = $input.first().json.rows.filter(r => r.relevant);\nreturn rows.map(r => ({ json: {\n  link: r.link,\n  prompt: `You triage threat intelligence for an Australian MSSP. Our stack: Microsoft 365/Defender XDR/Sentinel/Entra, Fortinet (FortiGate/FortiManager/FortiAnalyzer), ConnectWise RMM, NinjaOne RMM, CrowdStrike Falcon, Proofpoint, ThreatLocker, Nessus, Auvik, ~50 SMB client tenants. Answer in JSON only: {\"relevant\": true|false, \"reason\": \"<one line>\"}.\\n\\nTitle: ${r.title}\\nSummary: ${r.summary}`\n}}));",
-        "mode": "runOnceForAllItems"
-      },
-      "id": "3c7001a9-592c-4702-a839-0e2a3fe55c38",
-      "name": "AI relevancy (disabled)",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        880,
-        520
-      ]
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "https://api.anthropic.com/v1/messages",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "x-api-key",
-              "value": "YOUR-ANTHROPIC-API-KEY"
-            },
-            {
-              "name": "anthropic-version",
-              "value": "2023-06-01"
-            },
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ model: 'claude-haiku-5-5', max_tokens: 200, messages: [{ role: 'user', content: $json.prompt }] }) }}",
-        "options": {
-          "timeout": 60000
-        }
-      },
-      "id": "a9c7acfc-6189-42f5-8d9b-2057078f827c",
-      "name": "Claude relevancy check",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        1100,
-        520
-      ],
-      "disabled": true,
       "onError": "continueRegularOutput"
     }
   ],
@@ -269,11 +216,6 @@
             "node": "Upsert articles",
             "type": "main",
             "index": 0
-          },
-          {
-            "node": "AI relevancy (disabled)",
-            "type": "main",
-            "index": 0
           }
         ]
       ]
@@ -283,17 +225,6 @@
         [
           {
             "node": "Log run",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "AI relevancy (disabled)": {
-      "main": [
-        [
-          {
-            "node": "Claude relevancy check",
             "type": "main",
             "index": 0
           }

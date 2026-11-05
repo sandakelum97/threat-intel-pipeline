@@ -12,7 +12,7 @@
           ]
         }
       },
-      "id": "6bc58bf5-25b1-458c-94e4-a3d8ab226988",
+      "id": "13ad9e90-0845-479d-96ff-e166c336a08f",
       "name": "Schedule",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
@@ -23,10 +23,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// ====== DEMO CONFIG \u2013 move these to n8n Credentials / Variables before production ======\nreturn [{\n  json: {\n    SUPABASE_URL: \"https://YOUR-PROJECT.supabase.co\",\n    SUPABASE_SERVICE_KEY: \"YOUR-SERVICE-ROLE-KEY\",      // server-side only, never in the dashboard\n    TEAMS_WEBHOOK: \"https://YOUR-TENANT.webhook.office.com/webhookb2/....\",\n    DASHBOARD_URL: \"https://your-dashboard-url/\",      // linked at the bottom of every email/card\n    EMAIL_TO: \"tharakajce.97@gmail.com\",                       // comma-separated list for the team digest\n    EMAIL_FROM: \"Threat Intel <tharakajce.97@gmail.com>\",        // must match the SMTP credential account\n\n    // Vendors/products in client environments. Case-insensitive substring match on\n    // vendorProject + product (KEV) and title + summary (news).\n    VENDOR_ALLOWLIST: [\n      \"Microsoft\",\"Windows\",\"Exchange\",\"SharePoint\",\"Office\",\"Entra\",\"Azure\",\"Intune\",\n      \"Fortinet\",\"FortiGate\",\"FortiOS\",\"FortiManager\",\"FortiAnalyzer\",\"FortiClient\",\n      \"ConnectWise\",\"ScreenConnect\",\"NinjaOne\",\"Ninja RMM\",\n      \"Cisco\",\"Ivanti\",\"Citrix\",\"NetScaler\",\"VMware\",\"Broadcom\",\"Veeam\",\"SonicWall\",\n      \"Palo Alto\",\"PAN-OS\",\"GlobalProtect\",\"Apple\",\"iOS\",\"macOS\",\"Google\",\"Chrome\",\"Chromium\",\n      \"Mozilla\",\"Firefox\",\"Adobe\",\"Acrobat\",\"Atlassian\",\"Confluence\",\"Jira\",\"Oracle\",\n      \"SolarWinds\",\"Zoho\",\"ManageEngine\",\"Synology\",\"QNAP\",\"Ubiquiti\",\"UniFi\",\n      \"Dell\",\"Lenovo\",\"Progress\",\"MOVEit\",\"GitLab\",\"Jenkins\",\"OpenSSL\",\"Linux\",\"Ubuntu\",\n      \"Samba\",\"PaperCut\",\"Kaseya\",\"CrowdStrike\",\"Proofpoint\",\"ThreatLocker\",\"7-Zip\",\"WinRAR\",\n      \"Auvik\",\"Proxmox\",\"Hyper-V\",\"SQL Server\",\"Teams\",\"OneDrive\",\"Outlook\",\"Defender\"\n    ],\n\n    // High-signal phrases for news scoring (weight added to score)\n    SIGNAL_TERMS: {\n      \"zero-day\": 3, \"0-day\": 3, \"actively exploited\": 3, \"in the wild\": 3,\n      \"exploited\": 2, \"ransomware\": 2, \"critical\": 1, \"rce\": 2, \"remote code execution\": 2,\n      \"authentication bypass\": 2, \"patch now\": 2, \"emergency\": 2, \"out-of-band\": 2,\n      \"cve-\": 1, \"australia\": 2, \"australian\": 2, \"msp\": 2, \"mssp\": 2, \"rmm\": 2,\n      \"supply chain\": 1, \"phishing\": 1, \"data breach\": 1\n    },\n    MIN_SCORE: 3,                 // article is \"relevant\" at or above this\n    NEWS_MAX_AGE_DAYS: 7,         // ignore feed items older than this (MSRC feed returns its whole history)\n    KEV_LOOKBACK_DAYS: 14,        // on first run, only notify about KEV entries this recent\n    AI_ENABLED: false,            // flip to true once ANTHROPIC key is set in the AI node\n\n    // CVE Watch / enrichment (TI 04, TI 05)\n    NVD_API_KEY: \"YOUR-NVD-API-KEY\",   // https://nvd.nist.gov/developers/request-an-api-key\n    CVSS_MIN: 7.0,                     // CVE Watch keeps CVEs at or above this base score\n    CVE_LOOKBACK_HOURS: 48,            // NVD publication window per run\n    ENRICH_BATCH: 60                   // KEV rows enriched per TI 05 run\n  }\n}];",
+        "jsCode": "// ====== DEMO CONFIG \u2013 move secrets to n8n Credentials before production ======\nconst PRODUCT_GROUPS = {\n  // group name           : terms matched (case-insensitive) in KEV vendor/product, NVD CPE/description, article text\n  \"Microsoft\":            [\"Microsoft\",\"Windows\",\"Exchange\",\"SharePoint\",\"Office\",\"Entra\",\"Azure\",\"Intune\",\"Hyper-V\",\"SQL Server\",\"Teams\",\"OneDrive\",\"Outlook\",\"Defender\"],\n  \"Fortinet\":             [\"Fortinet\",\"FortiGate\",\"FortiOS\",\"FortiManager\",\"FortiAnalyzer\",\"FortiClient\"],\n  \"ConnectWise\":          [\"ConnectWise\",\"ScreenConnect\"],\n  \"NinjaOne\":             [\"NinjaOne\",\"Ninja RMM\"],\n  \"Cisco\":                [\"Cisco\"],\n  \"Ivanti\":               [\"Ivanti\"],\n  \"Citrix\":               [\"Citrix\",\"NetScaler\"],\n  \"VMware\":               [\"VMware\",\"Broadcom\"],\n  \"Veeam\":                [\"Veeam\"],\n  \"SonicWall\":            [\"SonicWall\"],\n  \"Palo Alto\":            [\"Palo Alto\",\"PAN-OS\",\"GlobalProtect\"],\n  \"Apple\":                [\"Apple\",\"iOS\",\"macOS\"],\n  \"Google / Chrome\":      [\"Google\",\"Chrome\",\"Chromium\"],\n  \"Mozilla\":              [\"Mozilla\",\"Firefox\"],\n  \"Adobe\":                [\"Adobe\",\"Acrobat\"],\n  \"Atlassian\":            [\"Atlassian\",\"Confluence\",\"Jira\"],\n  \"Oracle\":               [\"Oracle\"],\n  \"SolarWinds\":           [\"SolarWinds\"],\n  \"ManageEngine\":         [\"Zoho\",\"ManageEngine\"],\n  \"NAS\":                  [\"Synology\",\"QNAP\"],\n  \"Ubiquiti\":             [\"Ubiquiti\",\"UniFi\"],\n  \"Hardware OEM\":         [\"Dell\",\"Lenovo\"],\n  \"Progress / MOVEit\":    [\"Progress\",\"MOVEit\"],\n  \"DevOps\":               [\"GitLab\",\"Jenkins\"],\n  \"Linux / OSS\":          [\"OpenSSL\",\"Linux\",\"Ubuntu\",\"Samba\"],\n  \"PaperCut\":             [\"PaperCut\"],\n  \"Kaseya\":               [\"Kaseya\"],\n  \"Security tools\":       [\"CrowdStrike\",\"Proofpoint\",\"ThreatLocker\",\"Auvik\"],\n  \"Archivers\":            [\"7-Zip\",\"WinRAR\"],\n  \"Proxmox\":              [\"Proxmox\"],\n};\nreturn [{\n  json: {\n    SUPABASE_URL: \"https://YOUR-PROJECT.supabase.co\",\n    SUPABASE_SERVICE_KEY: \"YOUR-SERVICE-ROLE-KEY\",      // server-side only, never in the dashboard\n    TEAMS_WEBHOOK: \"https://YOUR-TENANT.webhook.office.com/webhookb2/....\",\n    DASHBOARD_URL: \"https://your-dashboard-url/\",      // linked at the bottom of every email/card\n    EMAIL_TO: \"tharakajce.97@gmail.com\",                       // comma-separated list for the team digest\n    EMAIL_FROM: \"Threat Intel <tharakajce.97@gmail.com>\",        // must match the SMTP credential account\n\n    PRODUCT_GROUPS,\n    VENDOR_ALLOWLIST: Object.values(PRODUCT_GROUPS).flat(),\n\n    // High-signal phrases for news scoring (weight added to score)\n    SIGNAL_TERMS: {\n      \"zero-day\": 3, \"0-day\": 3, \"actively exploited\": 3, \"in the wild\": 3,\n      \"exploited\": 2, \"ransomware\": 2, \"critical\": 1, \"rce\": 2, \"remote code execution\": 2,\n      \"authentication bypass\": 2, \"patch now\": 2, \"emergency\": 2, \"out-of-band\": 2,\n      \"cve-\": 1, \"australia\": 2, \"australian\": 2, \"msp\": 2, \"mssp\": 2, \"rmm\": 2,\n      \"supply chain\": 1, \"phishing\": 1, \"data breach\": 1\n    },\n    MIN_SCORE: 3,                 // article is \"relevant\" at or above this\n    NEWS_MAX_AGE_DAYS: 7,         // ignore feed items older than this (MSRC feed returns its whole history)\n    KEV_LOOKBACK_DAYS: 14,        // on first run, only notify about KEV entries this recent\n\n    // CVE Watch / enrichment (TI 04, TI 05)\n    NVD_API_KEY: \"YOUR-NVD-API-KEY\",   // https://nvd.nist.gov/developers/request-an-api-key\n    CVSS_MIN: 7.0,                     // CVE Watch keeps CVEs at or above this base score\n    CVE_LOOKBACK_HOURS: 48,            // NVD publication window per run\n    ENRICH_BATCH: 60,                  // KEV rows enriched per TI 05 run\n\n    // AI summaries (Claude). Credential \"Anthropic account\" is selected on the Claude nodes.\n    AI_ENABLED: true,\n    AI_MODEL: \"claude-haiku-5-5\",\n    AI_MAX_PER_RUN: 25,\n    AI_CONTEXT: \"We are an Australian MSSP running Microsoft 365/Defender XDR/Sentinel/Entra, Fortinet (FortiGate/FortiManager/FortiAnalyzer), ConnectWise and NinjaOne RMM, CrowdStrike Falcon, Proofpoint, ThreatLocker, Nessus and Auvik across ~50 SMB client tenants.\"\n  }\n}];",
         "mode": "runOnceForAllItems"
       },
-      "id": "77f8764f-577f-401b-a34c-4b47c6dc551d",
+      "id": "87f42d61-0836-4436-98fe-8a581352396c",
       "name": "Config",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -43,7 +43,7 @@
           "timeout": 60000
         }
       },
-      "id": "e86f5dfb-c315-4f41-b08f-dff4c041dba3",
+      "id": "d961f454-20e9-43c7-ab1d-1eb642951c57",
       "name": "Fetch KEV catalog",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -54,10 +54,10 @@
     },
     {
       "parameters": {
-        "jsCode": "const cfg = $('Config').first().json;\nconst allow = cfg.VENDOR_ALLOWLIST.map(s => s.toLowerCase());\nconst catalog = $input.first().json;\nconst vulns = catalog.vulnerabilities || [];\n\nconst rows = [];\nfor (const v of vulns) {\n  const hay = `${v.vendorProject} ${v.product}`.toLowerCase();\n  const hit = allow.find(a => hay.includes(a));\n  if (!hit) continue;\n  rows.push({\n    cve_id: v.cveID,\n    vendor: v.vendorProject,\n    product: v.product,\n    vuln_name: v.vulnerabilityName,\n    description: v.shortDescription,\n    required_action: v.requiredAction,\n    date_added: v.dateAdded,\n    due_date: v.dueDate,\n    ransomware: v.knownRansomwareCampaignUse || 'Unknown',\n    matched_vendor: hit,\n    catalog_version: catalog.catalogVersion,\n  });\n}\nreturn [{ json: { rows, total_in_catalog: vulns.length, in_scope: rows.length } }];",
+        "jsCode": "const cfg = $('Config').first().json;\nconst groupOf = (term) => {\n  const t = String(term || '').toLowerCase();\n  for (const [g, terms] of Object.entries(cfg.PRODUCT_GROUPS)) if (terms.some(x => x.toLowerCase() === t)) return g;\n  return 'Other';\n};\n\nconst allow = cfg.VENDOR_ALLOWLIST.map(s => s.toLowerCase());\nconst catalog = $input.first().json;\nconst vulns = catalog.vulnerabilities || [];\nconst rows = [];\nfor (const v of vulns) {\n  const hay = `${v.vendorProject} ${v.product}`.toLowerCase();\n  const hit = allow.find(a => hay.includes(a));\n  if (!hit) continue;\n  rows.push({ cve_id: v.cveID, vendor: v.vendorProject, product: v.product, vuln_name: v.vulnerabilityName, description: v.shortDescription,\n    required_action: v.requiredAction, date_added: v.dateAdded, due_date: v.dueDate, ransomware: v.knownRansomwareCampaignUse || 'Unknown',\n    matched_vendor: hit, product_group: groupOf(hit), catalog_version: catalog.catalogVersion });\n}\nreturn [{ json: { rows, total_in_catalog: vulns.length, in_scope: rows.length } }];",
         "mode": "runOnceForAllItems"
       },
-      "id": "e4c3bb22-8110-44b2-ad7f-40a65e2410d7",
+      "id": "be89b6c9-1b75-473c-9f81-3ec44e0e4dda",
       "name": "Filter to our vendors",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -98,7 +98,7 @@
           "timeout": 60000
         }
       },
-      "id": "c2f78a52-348a-4968-af34-17469437a474",
+      "id": "c2b8d1b4-b0f9-4412-9b19-395152ad4a24",
       "name": "Upsert kev_entries (new rows only)",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -109,15 +109,148 @@
     },
     {
       "parameters": {
-        "jsCode": "// Supabase returned ONLY the rows it inserted (Prefer: resolution=ignore-duplicates,return=representation)\nconst cfg = $('Config').first().json;\nconst inserted = $input.all().map(i => i.json).filter(r => r && r.cve_id);\nconst cutoff = new Date(Date.now() - cfg.KEV_LOOKBACK_DAYS * 86400000);\nconst fresh = inserted.filter(r => new Date(r.date_added) >= cutoff)\n                      .sort((a, b) => (a.date_added < b.date_added ? 1 : -1));\nif (fresh.length === 0) return [];\n\nconst body = [\n  { type: 'TextBlock', size: 'Large', weight: 'Bolder',\n    text: `CISA KEV \u2013 ${fresh.length} new in-scope ${fresh.length === 1 ? 'entry' : 'entries'}` },\n  { type: 'TextBlock', isSubtle: true, spacing: 'None',\n    text: `Filtered to vendors in our client environments \u00b7 ${inserted.length} stored this run` },\n];\nfor (const r of fresh.slice(0, 15)) {\n  const flag = r.ransomware === 'Known' ? ' \u26a0 **Ransomware use known**' : '';\n  body.push({ type: 'TextBlock', weight: 'Bolder', spacing: 'Medium', wrap: true,\n    text: `[${r.cve_id}](https://nvd.nist.gov/vuln/detail/${r.cve_id}) \u2013 ${r.vendor} ${r.product}${flag}` });\n  body.push({ type: 'TextBlock', wrap: true, spacing: 'None', text: r.vuln_name });\n  body.push({ type: 'TextBlock', wrap: true, spacing: 'None', isSubtle: true,\n    text: `Added ${r.date_added} \u00b7 Federal due ${r.due_date} \u00b7 ${r.required_action}` });\n}\nif (fresh.length > 15) body.push({ type: 'TextBlock', isSubtle: true, text: `\u2026and ${fresh.length - 15} more on the dashboard` });\nbody.push({ type: 'TextBlock', spacing: 'Medium', text: `[Open dashboard](${cfg.DASHBOARD_URL})` });\n\nconst esc = (t) => String(t ?? '').replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));\nlet html = `<div style=\"font-family:Segoe UI,Arial,sans-serif;font-size:14px;color:#1b1f1c;max-width:720px\">\n<h2 style=\"margin:0 0 4px\">CISA KEV \u2013 ${fresh.length} new in-scope ${fresh.length === 1 ? 'entry' : 'entries'}</h2>\n<p style=\"color:#666;margin:0 0 16px\">Filtered to vendors in our client environments \u00b7 ${inserted.length} stored this run</p>`;\nfor (const r of fresh) {\n  const flag = r.ransomware === 'Known' ? ' <span style=\"color:#b3261e;font-weight:600\">\u26a0 Ransomware use known</span>' : '';\n  html += `<div style=\"border-top:1px solid #ddd;padding:10px 0\">\n  <div><a href=\"https://nvd.nist.gov/vuln/detail/${r.cve_id}\" style=\"font-weight:600\">${r.cve_id}</a> \u2013 ${esc(r.vendor)} ${esc(r.product)}${flag}</div>\n  <div>${esc(r.vuln_name)}</div>\n  <div style=\"color:#666;font-size:12px\">Added ${r.date_added} \u00b7 Federal due ${r.due_date} \u00b7 ${esc((r.required_action || '').slice(0, 140))}${(r.required_action || '').length > 140 ? '\u2026' : ''}</div></div>`;\n}\nhtml += `<p style=\"margin-top:16px\"><a href=\"${cfg.DASHBOARD_URL}\">Open dashboard</a></p></div>`;\nconst subject = `[Threat Intel] KEV: ${fresh.length} new in-scope ${fresh.length === 1 ? 'CVE' : 'CVEs'} \u2013 ${fresh.slice(0,3).map(r => r.vendor).filter((v,i,a)=>a.indexOf(v)===i).join(', ')}`;\n\nreturn [{ json: { card: body, html, subject, count: fresh.length, cves: fresh.map(r => r.cve_id) } }];",
+        "jsCode": "// Supabase returned ONLY the rows it inserted (Prefer: resolution=ignore-duplicates,return=representation)\nconst cfg = $('Config').first().json;\nconst inserted = $input.all().map(i => i.json).filter(r => r && r.cve_id);\nconst cutoff = new Date(Date.now() - cfg.KEV_LOOKBACK_DAYS * 86400000);\nconst rows = inserted.filter(r => new Date(r.date_added) >= cutoff).sort((a, b) => (a.date_added < b.date_added ? 1 : -1));\nif (rows.length === 0) return [];\nreturn [{ json: { rows, inserted: inserted.length } }];",
         "mode": "runOnceForAllItems"
       },
-      "id": "9758fd81-c013-4077-98ea-3467a955ad9f",
-      "name": "Build Teams card",
+      "id": "2a7dc583-7cf3-4b5c-88e6-6f029ecb3ec9",
+      "name": "Fresh KEV rows",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
         880,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const cfg = $('Config').first().json;\nconst rows = $input.first().json.rows;\nif (!cfg.AI_ENABLED || rows.length === 0) return [{ json: { skip: true, prompt: 'Reply with {}' } }];\n// one prompt per browser-release batch instead of per CVE\nconst seenBatch = new Set();\nconst picked = [];\nfor (const r of rows) {\n  if (r.batch_key) { if (seenBatch.has(r.batch_key)) continue; seenBatch.add(r.batch_key); }\n  picked.push(r);\n  if (picked.length >= cfg.AI_MAX_PER_RUN) break;\n}\nreturn picked.map(r => ({ json: { key: r.batch_key || r['cve_id'], prompt:\n  `${cfg.AI_CONTEXT}\\nYou write short threat-intel notes for our SOC analysts. Reply with JSON only, no markdown, exactly this shape: {\"summary\":\"2 plain-English sentences: what the flaw is and what an attacker gains\",\"why\":\"1 sentence: what we should do for clients (patch/mitigate/monitor) and how urgent\"}\\n\\n` + `CVE: ${r.cve_id}\\nVendor/product: ${r.vendor || r.matched_vendor || ''} ${r.product || ''}\\nTitle: ${r.vuln_name || ''}\\nCVSS: ${r.cvss_score ?? 'n/a'} ${r.cvss_severity || ''}  EPSS: ${r.epss_score ?? 'n/a'}  Ransomware use: ${r.ransomware || 'n/a'}\\nDescription: ${(r.description || '').slice(0, 900)}` } }));",
+        "mode": "runOnceForAllItems"
+      },
+      "id": "ee84357d-81d7-4747-9aeb-d10f4a4b37e4",
+      "name": "Prep AI",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "anthropicApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: $('Config').first().json.AI_MODEL, max_tokens: 400, messages: [{ role: 'user', content: $json.prompt }] }) }}",
+        "options": {
+          "timeout": 60000,
+          "batching": {
+            "batch": {
+              "batchSize": 4,
+              "batchInterval": 1200
+            }
+          }
+        }
+      },
+      "id": "a55bf6c5-b385-4f21-acfd-2f99fb8315e5",
+      "name": "Claude summarise",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1320,
+        300
+      ],
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "anthropicApi": {
+          "id": "",
+          "name": "Anthropic account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const parseAi = (item) => {\n  try {\n    const j = item.json || {};\n    if (j.error || !j.content) return null;\n    let text = (j.content || []).map(c => c.text || '').join('').trim();\n    text = text.replace(/^```(?:json)?/i, '').replace(/```$/, '').trim();\n    const start = text.indexOf('{'); const end = text.lastIndexOf('}');\n    if (start < 0 || end < 0) return null;\n    return JSON.parse(text.slice(start, end + 1));\n  } catch { return null; }\n};\n\nconst rows = $('Fresh KEV rows').first().json.rows;\nconst prep = $('Prep AI').all();\nconst byKey = {};\n$input.all().forEach((item, i) => { const k = prep[i]?.json?.key; const p = k ? parseAi(item) : null; if (k && p) byKey[k] = p; });\nlet summarised = 0;\nfor (const r of rows) {\n  const p = byKey[r.batch_key] || byKey[r['cve_id']];\n  if (p) { r.ai_summary = String(p.summary || '').slice(0, 600); r.ai_reason = String(p.why || p.action || '').slice(0, 400); if (typeof p.relevant === 'boolean') r.ai_verdict = p.relevant; summarised++; }\n}\n\nreturn [{ json: { rows, summarised } }];",
+        "mode": "runOnceForAllItems"
+      },
+      "id": "0bff1722-d4be-4a55-8a9b-811b9cefb47e",
+      "name": "Merge AI",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1540,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Config').first().json.SUPABASE_URL }}/rest/v1/kev_entries?on_conflict=cve_id",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $('Config').first().json.SUPABASE_SERVICE_KEY }}"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Config').first().json.SUPABASE_SERVICE_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "resolution=merge-duplicates,return=minimal"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.rows.filter(r => r.ai_summary).map(r => ({ cve_id: r.cve_id, ai_summary: r.ai_summary, ai_reason: r.ai_reason }))) }}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "6a5ff3fc-a4f6-4de0-aa2f-1e9ee4ba522f",
+      "name": "Save summaries",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1760,
+        300
+      ],
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const esc = (t) => String(t ?? '').replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));\nconst cfg = $('Config').first().json;\nconst fresh = $('Merge AI').first().json.rows;\nconst inserted = $('Fresh KEV rows').first().json.inserted;\nconst sevColor = { CRITICAL: '#b3261e', HIGH: '#c2410c', MEDIUM: '#9a6200', LOW: '#2e6b3a' };\nconst byGroup = {}; for (const r of fresh) (byGroup[r.product_group || 'Other'] ||= []).push(r);\nconst groups = Object.entries(byGroup).sort((a, b) => b[1].length - a[1].length);\nlet html = `<div style=\"font-family:Segoe UI,Arial,sans-serif;font-size:14px;color:#1b1f1c;max-width:760px\">\n<h2 style=\"margin:0 0 4px\">CISA KEV \u2013 ${fresh.length} new in-scope ${fresh.length === 1 ? 'entry' : 'entries'}</h2>\n<p style=\"color:#666;margin:0 0 12px\">Confirmed-exploited vulnerabilities in products we manage \u00b7 ${groups.length} product ${groups.length === 1 ? 'group' : 'groups'} \u00b7 ${inserted} stored this run</p>`;\nfor (const [g, list] of groups) {\n  html += `<h3 style=\"margin:18px 0 6px;font-size:15px;border-bottom:2px solid #0f5e4a;padding-bottom:3px\">${esc(g)} <span style=\"color:#666;font-weight:400;font-size:13px\">(${list.length})</span></h3>`;\n  for (const r of list) {\n    const flag = r.ransomware === 'Known' ? ' <span style=\"color:#b3261e;font-weight:600\">\u26a0 Ransomware use known</span>' : '';\n    const sev = r.cvss_score != null ? ` <span style=\"color:${sevColor[r.cvss_severity] || '#666'};font-weight:600\">${r.cvss_severity || ''} ${r.cvss_score}</span>` : '';\n    html += `<div style=\"padding:8px 0 10px;border-top:1px solid #eee\">\n    <div><a href=\"https://nvd.nist.gov/vuln/detail/${r.cve_id}\" style=\"font-weight:600\">${r.cve_id}</a> \u2013 ${esc(r.vendor)} ${esc(r.product)}${sev}${flag}</div>\n    <div style=\"margin-top:2px\">${esc(r.vuln_name)}</div>\n    ${r.ai_summary ? `<div style=\"margin-top:6px;padding:8px 10px;background:#f3f6f4;border-left:3px solid #0f5e4a;border-radius:3px\"><div>${esc(r.ai_summary)}</div>${r.ai_reason ? `<div style=\"margin-top:4px;color:#0f5e4a;font-weight:600\">\u2192 ${esc(r.ai_reason)}</div>` : ''}</div>` : `<div style=\"margin-top:4px;color:#444\">${esc((r.description || '').slice(0, 300))}</div>`}\n    <div style=\"color:#666;font-size:12px;margin-top:4px\">Added ${r.date_added} \u00b7 Federal due ${r.due_date}</div></div>`;\n  }\n}\nhtml += `<p style=\"margin-top:16px\"><a href=\"${cfg.DASHBOARD_URL}\">Open dashboard</a></p></div>`;\nconst subject = `[Threat Intel] KEV: ${fresh.length} new in-scope ${fresh.length === 1 ? 'CVE' : 'CVEs'} \u2013 ${groups.slice(0, 3).map(g => g[0]).join(', ')}`;\nreturn [{ json: { html, subject, count: fresh.length, cves: fresh.map(r => r.cve_id) } }];",
+        "mode": "runOnceForAllItems"
+      },
+      "id": "20f0825c-ee3e-463a-813d-26ce9528cfa2",
+      "name": "Build email",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1980,
         300
       ]
     },
@@ -130,12 +263,12 @@
         "html": "={{ $json.html }}",
         "options": {}
       },
-      "id": "60a3fbdd-c37d-4d8f-92f1-b8e5a2783ca5",
+      "id": "1a049746-0a44-4780-89c0-7a412e5d1a30",
       "name": "Send email",
       "type": "n8n-nodes-base.emailSend",
       "typeVersion": 2.1,
       "position": [
-        1100,
+        2200,
         300
       ],
       "credentials": {
@@ -144,36 +277,6 @@
           "name": "SMTP account"
         }
       }
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "={{ $('Config').first().json.TEAMS_WEBHOOK }}",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ type: 'message', attachments: [{ contentType: 'application/vnd.microsoft.card.adaptive', contentUrl: null, content: { $schema: 'http://adaptivecards.io/schemas/adaptive-card.json', type: 'AdaptiveCard', version: '1.4', msteams: { width: 'Full' }, body: $json.card } }] }) }}",
-        "options": {
-          "timeout": 60000
-        }
-      },
-      "id": "f2269651-2e5b-487d-b74b-bb5f0faa47f4",
-      "name": "Post to Teams (disabled)",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        1100,
-        520
-      ],
-      "disabled": true
     },
     {
       "parameters": {
@@ -202,17 +305,17 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ kind: 'kev', item_count: $('Build Teams card').first().json.count, payload: { cves: $('Build Teams card').first().json.cves } }) }}",
+        "jsonBody": "={{ JSON.stringify({ kind: 'kev', item_count: $('Build email').first().json.count, payload: { cves: $('Build email').first().json.cves } }) }}",
         "options": {
           "timeout": 60000
         }
       },
-      "id": "81d4e58b-f074-433e-a210-f057e0c833e1",
-      "name": "Log digest",
+      "id": "b2cce5db-5f3d-4a91-8dd8-5246ca2f11bc",
+      "name": "Log run",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        1320,
+        2420,
         300
       ],
       "onError": "continueRegularOutput"
@@ -267,23 +370,73 @@
       "main": [
         [
           {
-            "node": "Build Teams card",
+            "node": "Fresh KEV rows",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Build Teams card": {
+    "Fresh KEV rows": {
+      "main": [
+        [
+          {
+            "node": "Prep AI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prep AI": {
+      "main": [
+        [
+          {
+            "node": "Claude summarise",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude summarise": {
+      "main": [
+        [
+          {
+            "node": "Merge AI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge AI": {
+      "main": [
+        [
+          {
+            "node": "Save summaries",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save summaries": {
+      "main": [
+        [
+          {
+            "node": "Build email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build email": {
       "main": [
         [
           {
             "node": "Send email",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Post to Teams (disabled)",
             "type": "main",
             "index": 0
           }
@@ -294,7 +447,7 @@
       "main": [
         [
           {
-            "node": "Log digest",
+            "node": "Log run",
             "type": "main",
             "index": 0
           }

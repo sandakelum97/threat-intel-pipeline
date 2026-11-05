@@ -14,7 +14,10 @@ AI relevancy step is wired in but disabled.
 | **TI 02 – News Collector** | hourly | Reads 8 RSS feeds, dedupes by link, scores each article against the vendor allowlist and high-signal terms (zero-day, actively exploited, ransomware, Australia, MSP…), upserts into `articles` with the score and matched terms. |
 | **TI 03 – Daily Digest** | weekdays 06:45 | Reads relevant articles from the last 24 h, groups by source, sends one HTML email (Teams optional). |
 | **TI 04 – CVE Watch** | every 6 h | Pulls CVEs published in the last 48 h from NVD, keeps those matching the vendor allowlist with CVSS ≥ 7, adds EPSS, stores in `cve_watch`, emails the new ones. "Patch before it's exploited." |
-| **TI 05 – KEV Enrich** | every 2 h | Back-fills CVSS (NVD) and EPSS (FIRST) onto `kev_entries`, 60 rows per run, within NVD rate limits. |
+| **TI 05 – KEV Enrich** | every 2 h | Back-fills CVSS (NVD), EPSS (FIRST), product group and a Claude summary onto `kev_entries`, 60 rows per run. |
+| **TI 06 – AI Summaries** | hourly | Writes a 2-sentence Claude summary + "why it matters / action" for relevant articles that don't have one yet (25 per run). |
+
+Every KEV entry, CVE Watch item and relevant article is tagged with a **product group** (`PRODUCT_GROUPS` in Config: Microsoft, Fortinet, ConnectWise, …). Emails and the dashboard group by it.
 
 The dashboard (`dashboard/index.html`) reads both tables with the anon key and shows KEV hits,
 kept/dropped articles and *why* each was kept.
@@ -25,7 +28,10 @@ kept/dropped articles and *why* each was kept.
 1. Open the SQL editor in your Supabase project and run `supabase/schema.sql`.
 2. Note the **Project URL**, the **service_role** key (for n8n) and the **anon** key (for the dashboard).
 
-Also run `supabase/migration-002-cvss-epss.sql` (CVSS/EPSS columns, `cve_watch` table) and `supabase/migration-003-batch-key.sql` (browser release batching).
+Also run `supabase/migration-002-cvss-epss.sql` (CVSS/EPSS columns, `cve_watch` table) `supabase/migration-003-batch-key.sql` (browser release batching) and `supabase/migration-004-groups-ai.sql` (product groups + AI summary columns).
+
+### 1c. Claude API key (summaries)
+In n8n: **Credentials → Create → Anthropic** → paste your API key, name it **`Anthropic account`**. The Claude nodes in TI 01/04/05/06 reference it by that name. Cost: Haiku, roughly US$0.001 per item; the Max plan's monthly API credit covers it. Set `AI_ENABLED: false` in Config to switch summaries off (emails still send).
 
 ### 1b. NVD API key (TI 04 / TI 05)
 Request a free key at https://nvd.nist.gov/developers/request-an-api-key and put it in `NVD_API_KEY` in the Config node of TI 04 and TI 05.
@@ -75,6 +81,8 @@ from a file share. Without keys it shows built-in sample data, which is handy fo
 - **Too noisy?** raise `MIN_SCORE` (default 3) or remove broad allowlist terms like `"Google"`, `"Linux"`.
 - **Missing things?** add the product names your clients run to `VENDOR_ALLOWLIST`; add feeds to the
   `Feed list` node in TI 02 (any RSS/Atom URL works; source label comes from the hostname).
+- **Product groups**: edit `PRODUCT_GROUPS` in the Config node (same block in every workflow — keep them identical). Terms are matched case-insensitively; the group name is what emails and the dashboard show.
+- **AI**: `AI_MODEL`, `AI_MAX_PER_RUN`, `AI_CONTEXT` (the one-paragraph description of our stack that Claude is given) in Config.
 - **CVE Watch threshold**: `CVSS_MIN` (7.0) and `CVE_LOOKBACK_HOURS` (48) in the TI 04 Config node.
 - **Enable AI**: set `AI_ENABLED: true` in the TI 02 Config node, put the API key in the
   *Claude relevancy check* node, enable the node. Then add a small Code node after it to write

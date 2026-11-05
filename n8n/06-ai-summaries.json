@@ -1,0 +1,366 @@
+{
+  "name": "TI 06 \u2013 AI Summaries",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "40 * * * *"
+            }
+          ]
+        }
+      },
+      "id": "832c5b78-ab76-4124-9adb-1e7f7ae5b61e",
+      "name": "Schedule",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -220,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// ====== DEMO CONFIG \u2013 move secrets to n8n Credentials before production ======\nconst PRODUCT_GROUPS = {\n  // group name           : terms matched (case-insensitive) in KEV vendor/product, NVD CPE/description, article text\n  \"Microsoft\":            [\"Microsoft\",\"Windows\",\"Exchange\",\"SharePoint\",\"Office\",\"Entra\",\"Azure\",\"Intune\",\"Hyper-V\",\"SQL Server\",\"Teams\",\"OneDrive\",\"Outlook\",\"Defender\"],\n  \"Fortinet\":             [\"Fortinet\",\"FortiGate\",\"FortiOS\",\"FortiManager\",\"FortiAnalyzer\",\"FortiClient\"],\n  \"ConnectWise\":          [\"ConnectWise\",\"ScreenConnect\"],\n  \"NinjaOne\":             [\"NinjaOne\",\"Ninja RMM\"],\n  \"Cisco\":                [\"Cisco\"],\n  \"Ivanti\":               [\"Ivanti\"],\n  \"Citrix\":               [\"Citrix\",\"NetScaler\"],\n  \"VMware\":               [\"VMware\",\"Broadcom\"],\n  \"Veeam\":                [\"Veeam\"],\n  \"SonicWall\":            [\"SonicWall\"],\n  \"Palo Alto\":            [\"Palo Alto\",\"PAN-OS\",\"GlobalProtect\"],\n  \"Apple\":                [\"Apple\",\"iOS\",\"macOS\"],\n  \"Google / Chrome\":      [\"Google\",\"Chrome\",\"Chromium\"],\n  \"Mozilla\":              [\"Mozilla\",\"Firefox\"],\n  \"Adobe\":                [\"Adobe\",\"Acrobat\"],\n  \"Atlassian\":            [\"Atlassian\",\"Confluence\",\"Jira\"],\n  \"Oracle\":               [\"Oracle\"],\n  \"SolarWinds\":           [\"SolarWinds\"],\n  \"ManageEngine\":         [\"Zoho\",\"ManageEngine\"],\n  \"NAS\":                  [\"Synology\",\"QNAP\"],\n  \"Ubiquiti\":             [\"Ubiquiti\",\"UniFi\"],\n  \"Hardware OEM\":         [\"Dell\",\"Lenovo\"],\n  \"Progress / MOVEit\":    [\"Progress\",\"MOVEit\"],\n  \"DevOps\":               [\"GitLab\",\"Jenkins\"],\n  \"Linux / OSS\":          [\"OpenSSL\",\"Linux\",\"Ubuntu\",\"Samba\"],\n  \"PaperCut\":             [\"PaperCut\"],\n  \"Kaseya\":               [\"Kaseya\"],\n  \"Security tools\":       [\"CrowdStrike\",\"Proofpoint\",\"ThreatLocker\",\"Auvik\"],\n  \"Archivers\":            [\"7-Zip\",\"WinRAR\"],\n  \"Proxmox\":              [\"Proxmox\"],\n};\nreturn [{\n  json: {\n    SUPABASE_URL: \"https://YOUR-PROJECT.supabase.co\",\n    SUPABASE_SERVICE_KEY: \"YOUR-SERVICE-ROLE-KEY\",      // server-side only, never in the dashboard\n    TEAMS_WEBHOOK: \"https://YOUR-TENANT.webhook.office.com/webhookb2/....\",\n    DASHBOARD_URL: \"https://your-dashboard-url/\",      // linked at the bottom of every email/card\n    EMAIL_TO: \"tharakajce.97@gmail.com\",                       // comma-separated list for the team digest\n    EMAIL_FROM: \"Threat Intel <tharakajce.97@gmail.com>\",        // must match the SMTP credential account\n\n    PRODUCT_GROUPS,\n    VENDOR_ALLOWLIST: Object.values(PRODUCT_GROUPS).flat(),\n\n    // High-signal phrases for news scoring (weight added to score)\n    SIGNAL_TERMS: {\n      \"zero-day\": 3, \"0-day\": 3, \"actively exploited\": 3, \"in the wild\": 3,\n      \"exploited\": 2, \"ransomware\": 2, \"critical\": 1, \"rce\": 2, \"remote code execution\": 2,\n      \"authentication bypass\": 2, \"patch now\": 2, \"emergency\": 2, \"out-of-band\": 2,\n      \"cve-\": 1, \"australia\": 2, \"australian\": 2, \"msp\": 2, \"mssp\": 2, \"rmm\": 2,\n      \"supply chain\": 1, \"phishing\": 1, \"data breach\": 1\n    },\n    MIN_SCORE: 3,                 // article is \"relevant\" at or above this\n    NEWS_MAX_AGE_DAYS: 7,         // ignore feed items older than this (MSRC feed returns its whole history)\n    KEV_LOOKBACK_DAYS: 14,        // on first run, only notify about KEV entries this recent\n\n    // CVE Watch / enrichment (TI 04, TI 05)\n    NVD_API_KEY: \"YOUR-NVD-API-KEY\",   // https://nvd.nist.gov/developers/request-an-api-key\n    CVSS_MIN: 7.0,                     // CVE Watch keeps CVEs at or above this base score\n    CVE_LOOKBACK_HOURS: 48,            // NVD publication window per run\n    ENRICH_BATCH: 60,                  // KEV rows enriched per TI 05 run\n\n    // AI summaries (Claude). Credential \"Anthropic account\" is selected on the Claude nodes.\n    AI_ENABLED: true,\n    AI_MODEL: \"claude-haiku-5-5\",\n    AI_MAX_PER_RUN: 25,\n    AI_CONTEXT: \"We are an Australian MSSP running Microsoft 365/Defender XDR/Sentinel/Entra, Fortinet (FortiGate/FortiManager/FortiAnalyzer), ConnectWise and NinjaOne RMM, CrowdStrike Falcon, Proofpoint, ThreatLocker, Nessus and Auvik across ~50 SMB client tenants.\"\n  }\n}];",
+        "mode": "runOnceForAllItems"
+      },
+      "id": "9eacabd2-7ad0-44ef-87d3-3e1a55fa3444",
+      "name": "Config",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        0,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $('Config').first().json.SUPABASE_URL }}/rest/v1/articles?select=link,title,source,summary,matched_terms,product_group&relevant=eq.true&ai_summary=is.null&published_at=gte.{{ $now.minus({ days: 3 }).toUTC().toISO() }}&order=score.desc&limit={{ $('Config').first().json.AI_MAX_PER_RUN }}",
+        "options": {
+          "timeout": 60000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $('Config').first().json.SUPABASE_SERVICE_KEY }}"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Config').first().json.SUPABASE_SERVICE_KEY }}"
+            }
+          ]
+        }
+      },
+      "id": "3d4d5024-fbe0-4fec-bc00-ccdcc8d01bed",
+      "name": "Get unsummarised articles",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        220,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const rows = $input.all().map(i => i.json).filter(a => a && a.link);\nif (rows.length === 0) return [];\nreturn [{ json: { rows } }];",
+        "mode": "runOnceForAllItems"
+      },
+      "id": "3fc198d7-1fd8-44a6-a78d-1cbee8e4d865",
+      "name": "Rows",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const cfg = $('Config').first().json;\nconst rows = $input.first().json.rows;\nif (!cfg.AI_ENABLED || rows.length === 0) return [{ json: { skip: true, prompt: 'Reply with {}' } }];\n// one prompt per browser-release batch instead of per CVE\nconst seenBatch = new Set();\nconst picked = [];\nfor (const r of rows) {\n  if (r.batch_key) { if (seenBatch.has(r.batch_key)) continue; seenBatch.add(r.batch_key); }\n  picked.push(r);\n  if (picked.length >= cfg.AI_MAX_PER_RUN) break;\n}\nreturn picked.map(r => ({ json: { key: r.batch_key || r['link'], prompt:\n  `${cfg.AI_CONTEXT}\\nYou write short threat-intel notes for our SOC analysts. Reply with JSON only, no markdown, exactly this shape: {\"summary\":\"2 plain-English sentences on what happened\",\"why\":\"1 sentence on why it matters (or does not) for our clients and what to do\",\"relevant\":true|false}\\n\\n` + `Article title: ${r.title}\\nSource: ${r.source}\\nFeed text: ${(r.summary || '').slice(0, 900)}` } }));",
+        "mode": "runOnceForAllItems"
+      },
+      "id": "eebea82f-16b4-4563-ae77-31c3b13cdfda",
+      "name": "Prep AI",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "anthropicApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: $('Config').first().json.AI_MODEL, max_tokens: 400, messages: [{ role: 'user', content: $json.prompt }] }) }}",
+        "options": {
+          "timeout": 60000,
+          "batching": {
+            "batch": {
+              "batchSize": 4,
+              "batchInterval": 1200
+            }
+          }
+        }
+      },
+      "id": "112bf2b2-fe59-4408-b26f-793fb2cf4d11",
+      "name": "Claude summarise",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        880,
+        300
+      ],
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "anthropicApi": {
+          "id": "",
+          "name": "Anthropic account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const parseAi = (item) => {\n  try {\n    const j = item.json || {};\n    if (j.error || !j.content) return null;\n    let text = (j.content || []).map(c => c.text || '').join('').trim();\n    text = text.replace(/^```(?:json)?/i, '').replace(/```$/, '').trim();\n    const start = text.indexOf('{'); const end = text.lastIndexOf('}');\n    if (start < 0 || end < 0) return null;\n    return JSON.parse(text.slice(start, end + 1));\n  } catch { return null; }\n};\n\nconst rows = $('Rows').first().json.rows;\nconst prep = $('Prep AI').all();\nconst byKey = {};\n$input.all().forEach((item, i) => { const k = prep[i]?.json?.key; const p = k ? parseAi(item) : null; if (k && p) byKey[k] = p; });\nlet summarised = 0;\nfor (const r of rows) {\n  const p = byKey[r.batch_key] || byKey[r['link']];\n  if (p) { r.ai_summary = String(p.summary || '').slice(0, 600); r.ai_reason = String(p.why || p.action || '').slice(0, 400); if (typeof p.relevant === 'boolean') r.ai_verdict = p.relevant; summarised++; }\n}\n\nreturn [{ json: { rows, summarised } }];",
+        "mode": "runOnceForAllItems"
+      },
+      "id": "9943a844-49f6-4b6b-92e7-6b27573b9d1b",
+      "name": "Merge AI",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const rows = $input.first().json.rows.filter(r => r.ai_summary);\nreturn rows.map(r => ({ json: { link: r.link, body: { ai_summary: r.ai_summary, ai_reason: r.ai_reason, ai_verdict: r.ai_verdict ?? null } } }));",
+        "mode": "runOnceForAllItems"
+      },
+      "id": "56c069d5-6f56-40fd-acc3-1d6463f5bfae",
+      "name": "Patch items",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1320,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ $('Config').first().json.SUPABASE_URL }}/rest/v1/articles?link=eq.{{ encodeURIComponent($json.link) }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $('Config').first().json.SUPABASE_SERVICE_KEY }}"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Config').first().json.SUPABASE_SERVICE_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=minimal"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.body) }}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "9f5edc9d-b5c1-4221-822a-f7d5d7629161",
+      "name": "Save summary",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1540,
+        300
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Config').first().json.SUPABASE_URL }}/rest/v1/digest_log",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $('Config').first().json.SUPABASE_SERVICE_KEY }}"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Config').first().json.SUPABASE_SERVICE_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=minimal"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ kind: 'ai-summaries', item_count: $('Merge AI').first().json.summarised, payload: {} }) }}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "24ddb2e2-4a08-4954-be9f-17b94f00b1f0",
+      "name": "Log run",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1760,
+        300
+      ],
+      "onError": "continueRegularOutput",
+      "executeOnce": true
+    }
+  ],
+  "connections": {
+    "Schedule": {
+      "main": [
+        [
+          {
+            "node": "Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config": {
+      "main": [
+        [
+          {
+            "node": "Get unsummarised articles",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get unsummarised articles": {
+      "main": [
+        [
+          {
+            "node": "Rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rows": {
+      "main": [
+        [
+          {
+            "node": "Prep AI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prep AI": {
+      "main": [
+        [
+          {
+            "node": "Claude summarise",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude summarise": {
+      "main": [
+        [
+          {
+            "node": "Merge AI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge AI": {
+      "main": [
+        [
+          {
+            "node": "Patch items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Patch items": {
+      "main": [
+        [
+          {
+            "node": "Save summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save summary": {
+      "main": [
+        [
+          {
+            "node": "Log run",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "meta": {
+    "instanceId": "threat-intel-demo"
+  }
+}
