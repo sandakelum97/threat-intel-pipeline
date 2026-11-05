@@ -118,8 +118,8 @@ footer { color: var(--muted); font-size: 12px; margin-top: 24px; }
 
 <script>
 // ===================== CONFIG =====================
-const SUPABASE_URL = "";          // e.g. https://abcd1234.supabase.co
-const SUPABASE_ANON_KEY = "";     // anon (public) key only – never the service role key
+const SUPABASE_URL = "https://wpxxcuncbduchwicsysn.supabase.co";          // e.g. https://abcd1234.supabase.co
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndweHhjdW5jYmR1Y2h3aWNzeXNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM4ODM4NTEsImV4cCI6MjEwOTQ1OTg1MX0.GzsojSZPDJJtS_0h8n8xIUyXzEhPs341YK682fxbrbc";     // anon (public) key only – never the service role key
 // ==================================================
 
 const SAMPLE = {
@@ -150,7 +150,7 @@ const fmtDate = (s) => s ? new Date(s).toLocaleDateString("en-AU", {day:"2-digit
 const fmtDT = (s) => s ? new Date(s).toLocaleString("en-AU", {day:"2-digit", month:"short", hour:"2-digit", minute:"2-digit"}) : "";
 
 async function sb(path) {
-  const r = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } });
+  const r = await fetch(`${SUPABASE_URL.replace(/\/+$/, "")}/rest/v1/${path}`, { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } });
   if (!r.ok) throw new Error(`${path}: HTTP ${r.status}`);
   return r.json();
 }
