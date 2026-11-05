@@ -12,7 +12,7 @@
           ]
         }
       },
-      "id": "e9bb4993-2502-419d-b450-292fc65e2463",
+      "id": "ec6e57a9-3d0f-4544-9953-4cc2001a12e2",
       "name": "Schedule",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
@@ -23,10 +23,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// ====== DEMO CONFIG \u2013 move these to n8n Credentials / Variables before production ======\nreturn [{\n  json: {\n    SUPABASE_URL: \"https://YOUR-PROJECT.supabase.co\",\n    SUPABASE_SERVICE_KEY: \"YOUR-SERVICE-ROLE-KEY\",      // server-side only, never in the dashboard\n    TEAMS_WEBHOOK: \"https://YOUR-TENANT.webhook.office.com/webhookb2/....\",\n    DASHBOARD_URL: \"https://your-dashboard-url/\",      // linked at the bottom of every email/card\n    EMAIL_TO: \"tharakajce.97@gmail.com\",                       // comma-separated list for the team digest\n    EMAIL_FROM: \"Threat Intel <tharakajce.97@gmail.com>\",        // must match the SMTP credential account\n\n    // Vendors/products in client environments. Case-insensitive substring match on\n    // vendorProject + product (KEV) and title + summary (news).\n    VENDOR_ALLOWLIST: [\n      \"Microsoft\",\"Windows\",\"Exchange\",\"SharePoint\",\"Office\",\"Entra\",\"Azure\",\"Intune\",\n      \"Fortinet\",\"FortiGate\",\"FortiOS\",\"FortiManager\",\"FortiAnalyzer\",\"FortiClient\",\n      \"ConnectWise\",\"ScreenConnect\",\"NinjaOne\",\"Ninja RMM\",\n      \"Cisco\",\"Ivanti\",\"Citrix\",\"NetScaler\",\"VMware\",\"Broadcom\",\"Veeam\",\"SonicWall\",\n      \"Palo Alto\",\"PAN-OS\",\"GlobalProtect\",\"Apple\",\"iOS\",\"macOS\",\"Google\",\"Chrome\",\"Chromium\",\n      \"Mozilla\",\"Firefox\",\"Adobe\",\"Acrobat\",\"Atlassian\",\"Confluence\",\"Jira\",\"Oracle\",\n      \"SolarWinds\",\"Zoho\",\"ManageEngine\",\"Synology\",\"QNAP\",\"Ubiquiti\",\"UniFi\",\n      \"Dell\",\"Lenovo\",\"Progress\",\"MOVEit\",\"GitLab\",\"Jenkins\",\"OpenSSL\",\"Linux\",\"Ubuntu\",\n      \"Samba\",\"PaperCut\",\"Kaseya\",\"CrowdStrike\",\"Proofpoint\",\"ThreatLocker\",\"7-Zip\",\"WinRAR\",\n      \"Auvik\",\"Proxmox\",\"Hyper-V\",\"SQL Server\",\"Teams\",\"OneDrive\",\"Outlook\",\"Defender\"\n    ],\n\n    // High-signal phrases for news scoring (weight added to score)\n    SIGNAL_TERMS: {\n      \"zero-day\": 3, \"0-day\": 3, \"actively exploited\": 3, \"in the wild\": 3,\n      \"exploited\": 2, \"ransomware\": 2, \"critical\": 1, \"rce\": 2, \"remote code execution\": 2,\n      \"authentication bypass\": 2, \"patch now\": 2, \"emergency\": 2, \"out-of-band\": 2,\n      \"cve-\": 1, \"australia\": 2, \"australian\": 2, \"msp\": 2, \"mssp\": 2, \"rmm\": 2,\n      \"supply chain\": 1, \"phishing\": 1, \"data breach\": 1\n    },\n    MIN_SCORE: 3,                 // article is \"relevant\" at or above this\n    KEV_LOOKBACK_DAYS: 14,        // on first run, only notify about KEV entries this recent\n    AI_ENABLED: false             // flip to true once ANTHROPIC key is set in the AI node\n  }\n}];",
+        "jsCode": "// ====== DEMO CONFIG \u2013 move these to n8n Credentials / Variables before production ======\nreturn [{\n  json: {\n    SUPABASE_URL: \"https://YOUR-PROJECT.supabase.co\",\n    SUPABASE_SERVICE_KEY: \"YOUR-SERVICE-ROLE-KEY\",      // server-side only, never in the dashboard\n    TEAMS_WEBHOOK: \"https://YOUR-TENANT.webhook.office.com/webhookb2/....\",\n    DASHBOARD_URL: \"https://your-dashboard-url/\",      // linked at the bottom of every email/card\n    EMAIL_TO: \"you@example.com\",                       // comma-separated list for the team digest\n    EMAIL_FROM: \"Threat Intel <you@gmail.com>\",        // must match the SMTP credential account\n\n    // Vendors/products in client environments. Case-insensitive substring match on\n    // vendorProject + product (KEV) and title + summary (news).\n    VENDOR_ALLOWLIST: [\n      \"Microsoft\",\"Windows\",\"Exchange\",\"SharePoint\",\"Office\",\"Entra\",\"Azure\",\"Intune\",\n      \"Fortinet\",\"FortiGate\",\"FortiOS\",\"FortiManager\",\"FortiAnalyzer\",\"FortiClient\",\n      \"ConnectWise\",\"ScreenConnect\",\"NinjaOne\",\"Ninja RMM\",\n      \"Cisco\",\"Ivanti\",\"Citrix\",\"NetScaler\",\"VMware\",\"Broadcom\",\"Veeam\",\"SonicWall\",\n      \"Palo Alto\",\"PAN-OS\",\"GlobalProtect\",\"Apple\",\"iOS\",\"macOS\",\"Google\",\"Chrome\",\"Chromium\",\n      \"Mozilla\",\"Firefox\",\"Adobe\",\"Acrobat\",\"Atlassian\",\"Confluence\",\"Jira\",\"Oracle\",\n      \"SolarWinds\",\"Zoho\",\"ManageEngine\",\"Synology\",\"QNAP\",\"Ubiquiti\",\"UniFi\",\n      \"Dell\",\"Lenovo\",\"Progress\",\"MOVEit\",\"GitLab\",\"Jenkins\",\"OpenSSL\",\"Linux\",\"Ubuntu\",\n      \"Samba\",\"PaperCut\",\"Kaseya\",\"CrowdStrike\",\"Proofpoint\",\"ThreatLocker\",\"7-Zip\",\"WinRAR\",\n      \"Auvik\",\"Proxmox\",\"Hyper-V\",\"SQL Server\",\"Teams\",\"OneDrive\",\"Outlook\",\"Defender\"\n    ],\n\n    // High-signal phrases for news scoring (weight added to score)\n    SIGNAL_TERMS: {\n      \"zero-day\": 3, \"0-day\": 3, \"actively exploited\": 3, \"in the wild\": 3,\n      \"exploited\": 2, \"ransomware\": 2, \"critical\": 1, \"rce\": 2, \"remote code execution\": 2,\n      \"authentication bypass\": 2, \"patch now\": 2, \"emergency\": 2, \"out-of-band\": 2,\n      \"cve-\": 1, \"australia\": 2, \"australian\": 2, \"msp\": 2, \"mssp\": 2, \"rmm\": 2,\n      \"supply chain\": 1, \"phishing\": 1, \"data breach\": 1\n    },\n    MIN_SCORE: 3,                 // article is \"relevant\" at or above this\n    KEV_LOOKBACK_DAYS: 14,        // on first run, only notify about KEV entries this recent\n    AI_ENABLED: false             // flip to true once ANTHROPIC key is set in the AI node\n  }\n}];",
         "mode": "runOnceForAllItems"
       },
-      "id": "003410eb-f54c-4988-8f77-ed6b93af7978",
+      "id": "18106163-cd54-4fb7-96f8-24a16f5da82d",
       "name": "Config",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -56,7 +56,7 @@
           ]
         }
       },
-      "id": "c48abcb8-a48a-4e51-9f2f-d1d703d7096d",
+      "id": "91c432f8-46c0-4b0d-a3c2-ff477f7530d8",
       "name": "Get relevant articles (24h)",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -67,10 +67,10 @@
     },
     {
       "parameters": {
-        "jsCode": "const cfg = $('Config').first().json;\nconst arts = $input.all().map(i => i.json).filter(a => a && a.link);\nif (arts.length === 0) return [];\n\nconst bySource = {};\nfor (const a of arts) (bySource[a.source] ||= []).push(a);\n\nconst body = [\n  { type: 'TextBlock', size: 'Large', weight: 'Bolder', text: `Threat intel digest \u2013 ${arts.length} relevant items (last 24h)` },\n  { type: 'TextBlock', isSubtle: true, spacing: 'None', wrap: true,\n    text: 'Keyword-scored against our client stack. Score and matched terms shown; full list on the dashboard.' },\n];\nfor (const [src, list] of Object.entries(bySource)) {\n  body.push({ type: 'TextBlock', weight: 'Bolder', spacing: 'Medium', text: `${src} (${list.length})` });\n  for (const a of list.slice(0, 6)) {\n    body.push({ type: 'TextBlock', wrap: true, spacing: 'Small',\n      text: `\u2022 [${a.title}](${a.link})  _score ${a.score}: ${(a.matched_terms || []).slice(0, 5).join(', ')}_` });\n  }\n  if (list.length > 6) body.push({ type: 'TextBlock', isSubtle: true, spacing: 'None', text: `\u2026${list.length - 6} more` });\n}\nbody.push({ type: 'TextBlock', spacing: 'Medium', text: `[Open dashboard](${cfg.DASHBOARD_URL})` });\nconst esc = (t) => String(t ?? '').replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));\nlet html = `<div style=\"font-family:Segoe UI,Arial,sans-serif;font-size:14px;color:#1b1f1c;max-width:720px\">\n<h2 style=\"margin:0 0 4px\">Threat intel digest \u2013 ${arts.length} relevant items (last 24h)</h2>\n<p style=\"color:#666;margin:0 0 16px\">Keyword-scored against our client stack. Score and matched terms shown; full list on the dashboard.</p>`;\nfor (const [src, list] of Object.entries(bySource)) {\n  html += `<h3 style=\"margin:16px 0 6px;font-size:14px\">${esc(src)} (${list.length})</h3><ul style=\"margin:0;padding-left:18px\">`;\n  for (const a of list) {\n    html += `<li style=\"margin:4px 0\"><a href=\"${a.link}\">${esc(a.title)}</a> <span style=\"color:#666;font-size:12px\">score ${a.score}: ${esc((a.matched_terms || []).slice(0, 5).join(', '))}</span></li>`;\n  }\n  html += `</ul>`;\n}\nhtml += `<p style=\"margin-top:16px\"><a href=\"${cfg.DASHBOARD_URL}\">Open dashboard</a></p></div>`;\nconst subject = `[Threat Intel] Daily digest \u2013 ${arts.length} relevant items`;\nreturn [{ json: { card: body, html, subject, count: arts.length, links: arts.map(a => a.link) } }];",
+        "jsCode": "const cfg = $('Config').first().json;\nconst arts = $input.all().map(i => i.json).filter(a => a && a.link);\nif (arts.length === 0) return [];\n\nconst bySource = {};\nfor (const a of arts) (bySource[a.source] ||= []).push(a);\n\nconst body = [\n  { type: 'TextBlock', size: 'Large', weight: 'Bolder', text: `Threat intel digest \u2013 ${arts.length} relevant items (last 24h)` },\n  { type: 'TextBlock', isSubtle: true, spacing: 'None', wrap: true,\n    text: 'Keyword-scored against our client stack. Score and matched terms shown; full list on the dashboard.' },\n];\nfor (const [src, list] of Object.entries(bySource)) {\n  body.push({ type: 'TextBlock', weight: 'Bolder', spacing: 'Medium', text: `${src} (${list.length})` });\n  for (const a of list.slice(0, 6)) {\n    body.push({ type: 'TextBlock', wrap: true, spacing: 'Small',\n      text: `\u2022 [${a.title}](${a.link})  _score ${a.score}: ${(a.matched_terms || []).slice(0, 5).join(', ')}_` });\n  }\n  if (list.length > 6) body.push({ type: 'TextBlock', isSubtle: true, spacing: 'None', text: `\u2026${list.length - 6} more` });\n}\nbody.push({ type: 'TextBlock', spacing: 'Medium', text: `[Open dashboard](${cfg.DASHBOARD_URL})` });\nconst esc = (t) => String(t ?? '').replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));\nlet html = `<div style=\"font-family:Segoe UI,Arial,sans-serif;font-size:14px;color:#1b1f1c;max-width:720px\">\n<h2 style=\"margin:0 0 4px\">Threat intel digest \u2013 ${arts.length} relevant items (last 24h)</h2>\n<p style=\"color:#666;margin:0 0 16px\">Keyword-scored against our client stack. Score and matched terms shown; full list on the dashboard.</p>`;\nconst PER_SOURCE = 8;\nfor (const [src, list] of Object.entries(bySource)) {\n  html += `<h3 style=\"margin:16px 0 6px;font-size:14px\">${esc(src)} (${list.length})</h3><ul style=\"margin:0;padding-left:18px\">`;\n  for (const a of list.slice(0, PER_SOURCE)) {\n    html += `<li style=\"margin:4px 0\"><a href=\"${a.link}\">${esc(a.title)}</a> <span style=\"color:#666;font-size:12px\">score ${a.score}: ${esc((a.matched_terms || []).slice(0, 5).join(', '))}</span></li>`;\n  }\n  if (list.length > PER_SOURCE) html += `<li style=\"color:#666\">\u2026${list.length - PER_SOURCE} more on the dashboard</li>`;\n  html += `</ul>`;\n}\nhtml += `<p style=\"margin-top:16px\"><a href=\"${cfg.DASHBOARD_URL}\">Open dashboard</a></p></div>`;\nconst subject = `[Threat Intel] Daily digest \u2013 ${arts.length} relevant items`;\nreturn [{ json: { card: body, html, subject, count: arts.length, links: arts.map(a => a.link) } }];",
         "mode": "runOnceForAllItems"
       },
-      "id": "e13aa6df-8fe2-4d32-90cc-135e3baf58f9",
+      "id": "7f426dc8-d0ac-4d7f-a5b1-244219610cf2",
       "name": "Build digest card",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -88,20 +88,14 @@
         "html": "={{ $json.html }}",
         "options": {}
       },
-      "id": "6d2b9656-233d-410d-a25f-f1109c86d24c",
+      "id": "01e73e63-d523-4139-812a-d2fb9a85399e",
       "name": "Send email",
       "type": "n8n-nodes-base.emailSend",
       "typeVersion": 2.1,
       "position": [
         660,
         300
-      ],
-      "credentials": {
-        "smtp": {
-          "id": "",
-          "name": "SMTP account"
-        }
-      }
+      ]
     },
     {
       "parameters": {
@@ -123,7 +117,7 @@
           "timeout": 60000
         }
       },
-      "id": "28f5943e-951f-4309-99ec-4a1fe285eac3",
+      "id": "8e9a8465-79da-440e-9097-b1e3fb6d7cd2",
       "name": "Post to Teams (disabled)",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -165,7 +159,7 @@
           "timeout": 60000
         }
       },
-      "id": "39135a48-b3b2-4b2a-9718-0c3531d3f004",
+      "id": "352b6c56-fb3b-4175-bfe0-31d7bbe50ae0",
       "name": "Log digest",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,

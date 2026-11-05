@@ -1,0 +1,67 @@
+const cfg = $('Config').first().json;
+const allow = cfg.VENDOR_ALLOWLIST.map(s => s.toLowerCase());
+const signals = Object.entries(cfg.SIGNAL_TERMS);
+
+const feedList = $('Feed list').all();
+const sourceFromFeed = (item) => {
+  const idx = item.pairedItem?.item ?? (Array.isArray(item.pairedItem) ? item.pairedItem[0]?.item : undefined);
+  return idx !== undefined ? feedList[idx]?.json?.source : undefined;
+};
+const sourceFromLink = (link) => {
+  try {
+    const h = new URL(link).hostname.replace(/^www\./, '');
+    if (h.includes('bleepingcomputer')) return 'BleepingComputer';
+    if (h.includes('thehackernews')) return 'The Hacker News';
+    if (h.includes('askwoody')) return 'AskWoody';
+    if (h.includes('cyber.gov.au')) return 'ASD ACSC';
+    if (h.includes('cisa.gov')) return 'CISA';
+    if (h.includes('msrc') || h.includes('microsoft.com')) return 'MSRC';
+    if (h.includes('fortiguard') || h.includes('fortinet')) return 'Fortinet PSIRT';
+    return h;
+  } catch { return 'unknown'; }
+};
+
+const strip = (s) => (s || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+const seen = new Set();
+const rows = [];
+
+for (const item of $input.all()) {
+  const j = item.json || {};
+  let link = j.link || j.guid || j.id;
+  if (!link || seen.has(link)) continue;
+  seen.add(link);
+  const source = sourceFromFeed(item) || sourceFromLink(link);
+  // MSRC items sometimes carry a bare CVE id instead of a URL
+  if (!/^https?:\/\//i.test(link) && /^CVE-\d{4}-\d+$/i.test(link)) link = `https://msrc.microsoft.com/update-guide/vulnerability/${link.toUpperCase()}`;
+
+  const title = strip(j.title);
+  const summary = strip(j.contentSnippet || j.content || j.description || j['content:encoded']).slice(0, 600);
+  const hay = `${title} ${summary}`.toLowerCase();
+
+  const matched = [];
+  let score = 0;
+  for (const a of allow) if (hay.includes(a)) { matched.push(a); score += 2; }
+  for (const [term, w] of signals) if (hay.includes(term)) { matched.push(term); score += w; }
+  // a vendor hit in the TITLE is a strong signal
+  const t = title.toLowerCase();
+  if (allow.some(a => t.includes(a))) score += 2;
+
+  // Noise rule: MSRC republishes every Chromium CVE (Edge inherits them). Action is always "update Edge",
+  // so keep them stored but out of the digest.
+  const noise = source === 'MSRC' && /^Chromium\b/i.test(title);
+  if (noise) { score = 0; matched.push('chromium-edge-batch'); }
+
+  const published = j.isoDate || j.pubDate || null;
+  rows.push({
+    link, title,
+    source,
+    published_at: published ? new Date(published).toISOString() : new Date().toISOString(),
+    summary,
+    score,
+    matched_terms: [...new Set(matched)],
+    relevant: score >= cfg.MIN_SCORE,
+  });
+}
+if (rows.length === 0) return [];
+return [{ json: { rows, fetched: $input.all().length, unique: rows.length,
+                  relevant: rows.filter(r => r.relevant).length } }];
