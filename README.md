@@ -13,6 +13,8 @@ AI relevancy step is wired in but disabled.
 | **TI 01 – KEV Monitor** | daily 06:00 | Pulls the CISA KEV JSON, keeps entries whose vendor/product is in our allowlist, inserts new ones into `kev_entries`, emails the new ones (Teams optional). Supabase returns only rows it inserted, so there's no "seen list" to maintain. |
 | **TI 02 – News Collector** | hourly | Reads 8 RSS feeds, dedupes by link, scores each article against the vendor allowlist and high-signal terms (zero-day, actively exploited, ransomware, Australia, MSP…), upserts into `articles` with the score and matched terms. |
 | **TI 03 – Daily Digest** | weekdays 06:45 | Reads relevant articles from the last 24 h, groups by source, sends one HTML email (Teams optional). |
+| **TI 04 – CVE Watch** | every 6 h | Pulls CVEs published in the last 48 h from NVD, keeps those matching the vendor allowlist with CVSS ≥ 7, adds EPSS, stores in `cve_watch`, emails the new ones. "Patch before it's exploited." |
+| **TI 05 – KEV Enrich** | every 2 h | Back-fills CVSS (NVD) and EPSS (FIRST) onto `kev_entries`, 60 rows per run, within NVD rate limits. |
 
 The dashboard (`dashboard/index.html`) reads both tables with the anon key and shows KEV hits,
 kept/dropped articles and *why* each was kept.
@@ -22,6 +24,12 @@ kept/dropped articles and *why* each was kept.
 ### 1. Supabase
 1. Open the SQL editor in your Supabase project and run `supabase/schema.sql`.
 2. Note the **Project URL**, the **service_role** key (for n8n) and the **anon** key (for the dashboard).
+
+Also run `supabase/migration-002-cvss-epss.sql` (CVSS/EPSS columns, `cve_watch` table).
+
+### 1b. NVD API key (TI 04 / TI 05)
+Request a free key at https://nvd.nist.gov/developers/request-an-api-key and put it in `NVD_API_KEY` in the Config node of TI 04 and TI 05.
+Without a key NVD allows 5 requests per 30 s; TI 05 is tuned for the keyed limit (50 per 30 s).
 
 ### 2. Email (default output)
 The workflows email the KEV alert and the daily digest. In n8n create an **SMTP** credential:
@@ -67,6 +75,7 @@ from a file share. Without keys it shows built-in sample data, which is handy fo
 - **Too noisy?** raise `MIN_SCORE` (default 3) or remove broad allowlist terms like `"Google"`, `"Linux"`.
 - **Missing things?** add the product names your clients run to `VENDOR_ALLOWLIST`; add feeds to the
   `Feed list` node in TI 02 (any RSS/Atom URL works; source label comes from the hostname).
+- **CVE Watch threshold**: `CVSS_MIN` (7.0) and `CVE_LOOKBACK_HOURS` (48) in the TI 04 Config node.
 - **Enable AI**: set `AI_ENABLED: true` in the TI 02 Config node, put the API key in the
   *Claude relevancy check* node, enable the node. Then add a small Code node after it to write
   `ai_verdict` / `ai_reason` back to `articles` (left out so the demo stays keyword-only).

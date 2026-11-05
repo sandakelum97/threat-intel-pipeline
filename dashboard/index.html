@@ -6,152 +6,247 @@
 <title>Threat Intel Watch</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <style>
-/* Layout: one summary strip, then two stacked work-queues (KEV, then news) with a sticky filter bar. */
+/* Layout: SOC-style dark console — header with run status, tab bar, KPI strip, chart row, filter chips, dense table. Light theme kept. */
 :root {
-  --bg: #f6f7f4;        --panel: #ffffff;    --fg: #1b1f1c;       --muted: #5f675f;
-  --line: #d9ddd6;      --accent: #0f5e4a;   --accent-ink: #ffffff;
-  --crit: #b3261e;      --warn: #9a6200;     --ok: #2e6b3a;
-  --chip: #e8ebe4;      --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  --bg: #0d1117; --panel: #141b22; --panel2: #1a222b; --fg: #e6edf3; --muted: #8b98a5; --line: #263039;
+  --accent: #3dd6a3; --accent-ink: #06130e; --accent-soft: rgba(61,214,163,.14);
+  --crit: #ff6b6b; --high: #ff9f43; --med: #f6c445; --low: #4cd38a; --info: #5ab0ff;
+  --chip: #1f2932; --chip-on: #3dd6a3; --chip-on-ink: #06130e;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
   --sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
-  color-scheme: light;
+  --shadow: 0 1px 0 rgba(255,255,255,.03) inset, 0 8px 24px rgba(0,0,0,.25);
+  color-scheme: dark;
 }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
-  --bg: #121513; --panel: #1b1f1c; --fg: #e9ece6; --muted: #9ca59b; --line: #2d332e;
-  --accent: #5fc3a2; --accent-ink: #0f1a15; --crit: #ff7b72; --warn: #e3b341; --ok: #7ad68a; --chip: #262c27;
-  color-scheme: dark; } }
-:root[data-theme="dark"] {
-  --bg: #121513; --panel: #1b1f1c; --fg: #e9ece6; --muted: #9ca59b; --line: #2d332e;
-  --accent: #5fc3a2; --accent-ink: #0f1a15; --crit: #ff7b72; --warn: #e3b341; --ok: #7ad68a; --chip: #262c27;
-  color-scheme: dark; }
+@media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) {
+  --bg: #f3f5f2; --panel: #ffffff; --panel2: #f7f9f6; --fg: #17201b; --muted: #5d6a63; --line: #d8ded9;
+  --accent: #0f7a5c; --accent-ink: #ffffff; --accent-soft: rgba(15,122,92,.10);
+  --crit: #c62828; --high: #d9531e; --med: #a36d00; --low: #2e7d4f; --info: #1f6fd0;
+  --chip: #e9ede8; --chip-on: #0f7a5c; --chip-on-ink: #ffffff; --shadow: 0 1px 2px rgba(0,0,0,.06);
+  color-scheme: light; } }
+:root[data-theme="light"] {
+  --bg: #f3f5f2; --panel: #ffffff; --panel2: #f7f9f6; --fg: #17201b; --muted: #5d6a63; --line: #d8ded9;
+  --accent: #0f7a5c; --accent-ink: #ffffff; --accent-soft: rgba(15,122,92,.10);
+  --crit: #c62828; --high: #d9531e; --med: #a36d00; --low: #2e7d4f; --info: #1f6fd0;
+  --chip: #e9ede8; --chip-on: #0f7a5c; --chip-on-ink: #ffffff; --shadow: 0 1px 2px rgba(0,0,0,.06);
+  color-scheme: light; }
 
 * { box-sizing: border-box; }
 html, body { margin: 0; }
 body { background: var(--bg); color: var(--fg); font: 14px/1.5 var(--sans);
   padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 0 48px; }
 a { color: inherit; }
-h1, h2 { text-wrap: balance; margin: 0; }
-h1 { font-size: 20px; font-weight: 600; letter-spacing: -0.01em; }
-h2 { font-size: 15px; font-weight: 600; }
-.wrap { max-width: 1180px; margin: 0 auto; }
-header { display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: baseline; justify-content: space-between; padding-block: 20px 12px; }
-.meta { color: var(--muted); font-family: var(--mono); font-size: 12px; }
-.label { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); font-weight: 500; }
+h1, h2, h3 { margin: 0; text-wrap: balance; }
+h1 { font-size: 18px; font-weight: 600; letter-spacing: .01em; }
+h2 { font-size: 14px; font-weight: 600; }
+.wrap { max-width: 1280px; margin: 0 auto; }
+.mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.muted { color: var(--muted); }
+.label { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 500; }
 
-.strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-block: 8px 20px; }
-.tile { background: var(--panel); border: 1px solid var(--line); padding: 12px 14px; display: grid; gap: 2px; }
+header { display: flex; flex-wrap: wrap; gap: 10px 20px; align-items: center; justify-content: space-between; padding-block: 16px 10px; }
+.brand { display: flex; align-items: center; gap: 10px; }
+.dot { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); }
+.dot.off { background: var(--med); box-shadow: 0 0 0 4px rgba(246,196,69,.15); }
+.runs { display: flex; flex-wrap: wrap; gap: 6px 14px; font-family: var(--mono); font-size: 11.5px; color: var(--muted); }
+.runs b { color: var(--fg); font-weight: 500; }
+.hdr-actions { display: flex; gap: 8px; align-items: center; }
+button { font: inherit; cursor: pointer; }
+.btn { background: transparent; color: var(--fg); border: 1px solid var(--line); padding: 6px 10px; border-radius: 6px; }
+.btn:hover { border-color: var(--accent); }
+.btn:focus-visible, .chip:focus-visible, input:focus-visible, select:focus-visible, .tab:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+.notice { border: 1px solid var(--med); color: var(--med); background: var(--panel); padding: 8px 12px; margin-block: 6px 12px; font-size: 13px; border-radius: 6px; }
+.notice code { font-family: var(--mono); }
+
+.tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--line); margin-block: 6px 16px; overflow-x: auto; }
+.tab { background: transparent; border: 0; color: var(--muted); padding: 10px 14px; border-bottom: 2px solid transparent; white-space: nowrap; font-weight: 500; }
+.tab[aria-selected="true"] { color: var(--fg); border-bottom-color: var(--accent); }
+.tab .n { font-family: var(--mono); font-size: 11px; background: var(--chip); padding: 1px 6px; border-radius: 10px; margin-left: 6px; color: var(--fg); }
+
+.strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 14px; }
+.tile { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; display: grid; gap: 2px; box-shadow: var(--shadow); position: relative; overflow: hidden; }
+.tile::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--tile-bar, var(--accent)); }
 .tile .n { font: 500 26px/1.1 var(--mono); font-variant-numeric: tabular-nums; }
-.tile .n.crit { color: var(--crit); }
 .tile .sub { color: var(--muted); font-size: 12px; }
+.tile.crit { --tile-bar: var(--crit); } .tile.high { --tile-bar: var(--high); } .tile.med { --tile-bar: var(--med); } .tile.info { --tile-bar: var(--info); }
 
-.bar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg); border-bottom: 1px solid var(--line);
-  display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; padding-block: 10px; margin-bottom: 16px; }
-.bar input, .bar select { font: inherit; color: var(--fg); background: var(--panel); border: 1px solid var(--line); padding: 6px 8px; min-width: 0; }
-.bar input { flex: 1 1 220px; }
-.bar label { display: inline-flex; gap: 6px; align-items: center; color: var(--muted); }
-.spacer { flex: 1 1 auto; }
-button.ghost { font: inherit; background: transparent; color: var(--accent); border: 1px solid var(--accent); padding: 6px 10px; cursor: pointer; }
-button.ghost:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px; margin-bottom: 14px; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; box-shadow: var(--shadow); min-width: 0; }
+.card h2 { margin-bottom: 8px; }
+.card .chartbox { position: relative; height: 190px; }
+.prio { display: grid; gap: 8px; }
+.prio-row { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel2); }
+.prio-row .why { color: var(--muted); font-size: 12px; }
 
-section { margin-bottom: 28px; }
-.sect-head { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: baseline; justify-content: space-between; margin-bottom: 8px; }
-.tablewrap { overflow-x: auto; border: 1px solid var(--line); background: var(--panel); }
-table { border-collapse: collapse; width: 100%; min-width: 720px; }
+.bar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg); padding-block: 8px; margin-bottom: 10px; display: grid; gap: 8px; }
+.row { display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center; }
+.row .label { margin-right: 2px; }
+input[type=search], select { font: inherit; color: var(--fg); background: var(--panel); border: 1px solid var(--line); padding: 7px 10px; border-radius: 6px; min-width: 0; }
+input[type=search] { flex: 1 1 240px; }
+.chip { background: var(--chip); color: var(--fg); border: 1px solid transparent; border-radius: 999px; padding: 4px 10px; font-size: 12.5px; display: inline-flex; gap: 6px; align-items: center; }
+.chip .c { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+.chip[aria-pressed="true"] { background: var(--chip-on); color: var(--chip-on-ink); }
+.chip[aria-pressed="true"] .c { color: inherit; opacity: .8; }
+.chip.sev-CRITICAL[aria-pressed="true"] { background: var(--crit); color: #fff; }
+.chip.sev-HIGH[aria-pressed="true"] { background: var(--high); color: #1a0d00; }
+.chip.sev-MEDIUM[aria-pressed="true"] { background: var(--med); color: #1a1300; }
+.chip.sev-LOW[aria-pressed="true"] { background: var(--low); color: #001a0a; }
+
+.tablewrap { overflow-x: auto; border: 1px solid var(--line); background: var(--panel); border-radius: 8px; box-shadow: var(--shadow); }
+table { border-collapse: collapse; width: 100%; min-width: 820px; }
 th, td { text-align: left; padding: 9px 12px; border-top: 1px solid var(--line); vertical-align: top; }
-th { border-top: 0; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); font-weight: 500; white-space: nowrap; }
-td.mono, th.mono { font-family: var(--mono); font-size: 12.5px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+th { border-top: 0; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 500; white-space: nowrap; background: var(--panel2); cursor: pointer; user-select: none; }
+th.sorted::after { content: " ▾"; color: var(--accent); }
+th.sorted.asc::after { content: " ▴"; }
+td.mono, th.mono { font-family: var(--mono); font-size: 12.5px; white-space: nowrap; }
 td .t { font-weight: 500; }
 td .s { color: var(--muted); font-size: 12.5px; margin-top: 2px; }
 tr.rw td:first-child { box-shadow: inset 3px 0 0 var(--crit); }
-.chips { display: flex; flex-wrap: wrap; gap: 4px; }
-.chip { background: var(--chip); font-family: var(--mono); font-size: 11px; padding: 1px 6px; border-radius: 2px; }
-.chip.sig { background: transparent; border: 1px solid var(--line); }
+.sev { display: inline-block; font-family: var(--mono); font-size: 11px; font-weight: 500; padding: 2px 7px; border-radius: 4px; border: 1px solid currentColor; }
+.sev.CRITICAL { color: var(--crit); } .sev.HIGH { color: var(--high); } .sev.MEDIUM { color: var(--med); } .sev.LOW { color: var(--low); } .sev.NA { color: var(--muted); }
+.epss { display: inline-grid; grid-template-columns: 44px 56px; gap: 6px; align-items: center; font-family: var(--mono); font-size: 12px; }
+.epss .trk { height: 6px; background: var(--chip); border-radius: 3px; overflow: hidden; }
+.epss .fill { display: block; height: 100%; background: linear-gradient(90deg, var(--low), var(--med), var(--crit)); }
 .pill { display: inline-block; font-family: var(--mono); font-size: 11px; padding: 1px 7px; border-radius: 10px; border: 1px solid currentColor; }
-.pill.crit { color: var(--crit); } .pill.warn { color: var(--warn); } .pill.ok { color: var(--ok); } .pill.muted { color: var(--muted); }
-.score { font-family: var(--mono); font-weight: 500; }
+.pill.new { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
+.pill.kev { color: var(--crit); }
+.pill.crit { color: var(--crit); } .pill.ok { color: var(--low); } .pill.muted { color: var(--muted); }
+.chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.kw { background: var(--chip); font-family: var(--mono); font-size: 11px; padding: 1px 6px; border-radius: 3px; }
+.kw.sig { background: transparent; border: 1px solid var(--line); }
 .empty { padding: 24px; color: var(--muted); text-align: center; }
-.notice { border: 1px solid var(--warn); color: var(--warn); padding: 8px 12px; margin-block: 8px 16px; font-size: 13px; }
-.notice code { font-family: var(--mono); }
+.count { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+.sect-head { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: baseline; justify-content: space-between; margin-bottom: 8px; }
 footer { color: var(--muted); font-size: 12px; margin-top: 24px; }
-@media (max-width: 640px) { table { min-width: 600px; } .tile .n { font-size: 22px; } }
+@media (max-width: 640px) { table { min-width: 640px; } .tile .n { font-size: 22px; } .card .chartbox { height: 160px; } }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 </style>
 </head>
 <body>
 <div class="wrap">
 <header>
-  <div>
-    <h1>Threat Intel Watch</h1>
-    <div class="meta" id="updated">loading…</div>
+  <div class="brand"><span class="dot" id="dot"></span><div><h1>Threat Intel Watch</h1><div class="runs" id="runs">loading…</div></div></div>
+  <div class="hdr-actions">
+    <span class="count" id="mode"></span>
+    <button class="btn" id="theme" type="button" title="Toggle theme">◐</button>
+    <button class="btn" id="refresh" type="button">Refresh</button>
   </div>
-  <div class="meta">KEV filtered to client vendors · news keyword-scored · <span id="mode"></span></div>
 </header>
 
 <div class="notice" id="demoNotice" hidden>Showing <strong>sample data</strong>. Set <code>SUPABASE_URL</code> and <code>SUPABASE_ANON_KEY</code> at the top of the script to read live data.</div>
 
-<div class="strip" id="strip"></div>
-
-<div class="bar">
-  <input id="q" type="search" placeholder="Search CVE, vendor, title, keyword…" aria-label="Search">
-  <label>Source <select id="src"><option value="">All</option></select></label>
-  <label>Window <select id="win"><option value="1">24 h</option><option value="7" selected>7 days</option><option value="30">30 days</option><option value="0">All</option></select></label>
-  <label><input type="checkbox" id="relOnly" checked> Relevant only</label>
-  <span class="spacer"></span>
-  <button class="ghost" id="refresh" type="button">Refresh</button>
+<div class="tabs" role="tablist">
+  <button class="tab" role="tab" data-tab="overview" aria-selected="true">Overview</button>
+  <button class="tab" role="tab" data-tab="kev">KEV <span class="n" id="nKev">0</span></button>
+  <button class="tab" role="tab" data-tab="watch">CVE Watch <span class="n" id="nWatch">0</span></button>
+  <button class="tab" role="tab" data-tab="articles">Articles <span class="n" id="nArt">0</span></button>
 </div>
 
-<section>
-  <div class="sect-head"><h2>Known Exploited Vulnerabilities in our stack</h2><span class="meta" id="kevCount"></span></div>
-  <div class="tablewrap"><table id="kev">
-    <thead><tr><th class="mono">CVE</th><th>Vendor / product</th><th>Vulnerability</th><th class="mono">Added</th><th class="mono">Fed. due</th><th>Ransomware</th></tr></thead>
+<div class="bar">
+  <div class="row">
+    <input id="q" type="search" placeholder="Search CVE, vendor, product, title, keyword…" aria-label="Search">
+    <span class="label">Window</span>
+    <select id="win"><option value="1">24 h</option><option value="7">7 days</option><option value="30" selected>30 days</option><option value="90">90 days</option><option value="0">All</option></select>
+  </div>
+  <div class="row" id="chipsRow"></div>
+</div>
+
+<section id="tab-overview">
+  <div class="strip" id="strip"></div>
+  <div class="charts">
+    <div class="card"><h2>KEV additions in scope · per day</h2><div class="chartbox"><canvas id="cKev"></canvas></div></div>
+    <div class="card"><h2>Severity mix · KEV + CVE Watch</h2><div class="chartbox"><canvas id="cSev"></canvas></div></div>
+    <div class="card"><h2>Relevant articles · by source</h2><div class="chartbox"><canvas id="cSrc"></canvas></div></div>
+  </div>
+  <div class="card"><h2>Patch-first list · ranked by exploitation evidence then EPSS</h2><div class="prio" id="prio"></div></div>
+</section>
+
+<section id="tab-kev" hidden>
+  <div class="sect-head"><h2>Known Exploited Vulnerabilities in our stack</h2><span class="count" id="kevCount"></span></div>
+  <div class="tablewrap"><table id="kev" data-sort="date_added" data-dir="desc">
+    <thead><tr><th class="mono" data-k="cve_id">CVE</th><th data-k="cvss_score">Severity</th><th data-k="epss_score">EPSS</th><th data-k="vendor">Vendor / product</th><th>Vulnerability</th><th class="mono" data-k="date_added">Added</th><th class="mono" data-k="due_date">Fed. due</th><th data-k="ransomware">Ransomware</th></tr></thead>
     <tbody></tbody></table></div>
 </section>
 
-<section>
-  <div class="sect-head"><h2>Articles</h2><span class="meta" id="artCount"></span></div>
-  <div class="tablewrap"><table id="arts">
-    <thead><tr><th class="mono">Score</th><th>Title</th><th>Source</th><th>Why it was kept</th><th class="mono">Published</th></tr></thead>
+<section id="tab-watch" hidden>
+  <div class="sect-head"><h2>High-severity CVEs in our stack · NVD, CVSS ≥ 7</h2><span class="count" id="watchCount"></span></div>
+  <div class="tablewrap"><table id="watch" data-sort="published_at" data-dir="desc">
+    <thead><tr><th class="mono" data-k="cve_id">CVE</th><th data-k="cvss_score">Severity</th><th data-k="epss_score">EPSS</th><th data-k="matched_vendor">Vendor</th><th>Description</th><th class="mono" data-k="published_at">Published</th><th>Status</th></tr></thead>
     <tbody></tbody></table></div>
 </section>
 
-<footer>Sources: CISA KEV · CISA advisories · ASD ACSC alerts &amp; advisories · MSRC · Fortinet PSIRT · BleepingComputer · The Hacker News · AskWoody. Pipeline: n8n → Supabase → email / Teams.</footer>
+<section id="tab-articles" hidden>
+  <div class="sect-head"><h2>Articles</h2><span class="count" id="artCount"></span></div>
+  <div class="tablewrap"><table id="arts" data-sort="score" data-dir="desc">
+    <thead><tr><th class="mono" data-k="score">Score</th><th data-k="title">Title</th><th data-k="source">Source</th><th>Why it was kept</th><th class="mono" data-k="published_at">Published</th></tr></thead>
+    <tbody></tbody></table></div>
+</section>
+
+<footer>Sources: CISA KEV · NVD · FIRST EPSS · CISA advisories · ASD ACSC · MSRC · Fortinet PSIRT · BleepingComputer · The Hacker News · AskWoody. Pipeline: n8n → Supabase → email / Teams.</footer>
 </div>
 
 <script>
 // ===================== CONFIG =====================
 const SUPABASE_URL = "https://wpxxcuncbduchwicsysn.supabase.co";          // e.g. https://abcd1234.supabase.co
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndweHhjdW5jYmR1Y2h3aWNzeXNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM4ODM4NTEsImV4cCI6MjEwOTQ1OTg1MX0.GzsojSZPDJJtS_0h8n8xIUyXzEhPs341YK682fxbrbc";     // anon (public) key only – never the service role key
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndweHhjdW5jYmR1Y2h3aWNzeXNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM4ODM4NTEsImV4cCI6MjEwOTQ1OTg1MX0.GzsojSZPDJJtS_0h8n8xIUyXzEhPs341YK682fxbrbc";     // anon / publishable key only – never the service role key
 // ==================================================
 
+const SIGNALS = new Set(["zero-day","0-day","actively exploited","in the wild","exploited","ransomware","critical","rce","remote code execution","authentication bypass","patch now","emergency","out-of-band","cve-","australia","australian","msp","mssp","rmm","supply chain","phishing","data breach","chromium-edge-batch"]);
+const DAY = 86400000;
+const now = () => Date.now();
+const iso = (d) => new Date(d).toISOString();
 const SAMPLE = {
   kev: [
-    {cve_id:"CVE-2026-20951",vendor:"Fortinet",product:"FortiOS, FortiProxy",vuln_name:"FortiOS SSL-VPN out-of-bounds write",date_added:"2026-11-03",due_date:"2026-11-24",ransomware:"Known",matched_vendor:"fortinet"},
-    {cve_id:"CVE-2026-19844",vendor:"Microsoft",product:"Windows",vuln_name:"Windows CLFS driver privilege escalation",date_added:"2026-11-03",due_date:"2026-11-17",ransomware:"Unknown",matched_vendor:"microsoft"},
-    {cve_id:"CVE-2026-18207",vendor:"Google",product:"Chromium V8",vuln_name:"Chromium V8 type confusion",date_added:"2026-11-01",due_date:"2026-11-22",ransomware:"Unknown",matched_vendor:"chrom"},
-    {cve_id:"CVE-2026-17110",vendor:"ConnectWise",product:"ScreenConnect",vuln_name:"ScreenConnect authentication bypass",date_added:"2026-10-29",due_date:"2026-11-12",ransomware:"Known",matched_vendor:"connectwise"},
-    {cve_id:"CVE-2026-16002",vendor:"Citrix",product:"NetScaler ADC and Gateway",vuln_name:"NetScaler memory overread",date_added:"2026-10-27",due_date:"2026-11-10",ransomware:"Unknown",matched_vendor:"citrix"}
+    {cve_id:"CVE-2026-20951",vendor:"Fortinet",product:"FortiOS, FortiProxy",vuln_name:"FortiOS SSL-VPN out-of-bounds write",date_added:iso(now()-1*DAY).slice(0,10),due_date:iso(now()+20*DAY).slice(0,10),ransomware:"Known",matched_vendor:"fortinet",cvss_score:9.8,cvss_severity:"CRITICAL",epss_score:0.912,epss_percentile:0.998},
+    {cve_id:"CVE-2026-19844",vendor:"Microsoft",product:"Windows",vuln_name:"Windows CLFS driver privilege escalation",date_added:iso(now()-1*DAY).slice(0,10),due_date:iso(now()+13*DAY).slice(0,10),ransomware:"Unknown",matched_vendor:"microsoft",cvss_score:7.8,cvss_severity:"HIGH",epss_score:0.21,epss_percentile:0.96},
+    {cve_id:"CVE-2026-18207",vendor:"Google",product:"Chromium V8",vuln_name:"Chromium V8 type confusion",date_added:iso(now()-3*DAY).slice(0,10),due_date:iso(now()+18*DAY).slice(0,10),ransomware:"Unknown",matched_vendor:"chrom",cvss_score:8.8,cvss_severity:"HIGH",epss_score:0.05,epss_percentile:0.89},
+    {cve_id:"CVE-2026-17110",vendor:"ConnectWise",product:"ScreenConnect",vuln_name:"ScreenConnect authentication bypass",date_added:iso(now()-6*DAY).slice(0,10),due_date:iso(now()+5*DAY).slice(0,10),ransomware:"Known",matched_vendor:"connectwise",cvss_score:10,cvss_severity:"CRITICAL",epss_score:0.97,epss_percentile:0.999},
+    {cve_id:"CVE-2026-16002",vendor:"Citrix",product:"NetScaler ADC and Gateway",vuln_name:"NetScaler memory overread",date_added:iso(now()-9*DAY).slice(0,10),due_date:iso(now()+2*DAY).slice(0,10),ransomware:"Unknown",matched_vendor:"citrix",cvss_score:7.5,cvss_severity:"HIGH",epss_score:0.62,epss_percentile:0.98},
+    {cve_id:"CVE-2025-54321",vendor:"Ivanti",product:"Connect Secure",vuln_name:"Ivanti Connect Secure missing authentication",date_added:iso(now()-15*DAY).slice(0,10),due_date:iso(now()-1*DAY).slice(0,10),ransomware:"Unknown",matched_vendor:"ivanti",cvss_score:9.1,cvss_severity:"CRITICAL",epss_score:0.44,epss_percentile:0.97},
+    {cve_id:"CVE-2025-50001",vendor:"Apple",product:"Multiple Products",vuln_name:"Apple WebKit memory corruption",date_added:iso(now()-22*DAY).slice(0,10),due_date:iso(now()-8*DAY).slice(0,10),ransomware:"Unknown",matched_vendor:"apple",cvss_score:null,cvss_severity:null,epss_score:null,epss_percentile:null}
+  ],
+  watch: [
+    {cve_id:"CVE-2026-30011",published_at:iso(now()-0.3*DAY),description:"Veeam Backup & Replication allows an authenticated user to execute arbitrary code via a crafted restore request.",cvss_score:8.8,cvss_severity:"HIGH",epss_score:0.012,epss_percentile:0.84,matched_vendor:"veeam",cpe_vendors:["veeam"]},
+    {cve_id:"CVE-2026-30020",published_at:iso(now()-0.8*DAY),description:"SonicWall SMA 1000 series: unauthenticated path traversal leading to file disclosure.",cvss_score:9.1,cvss_severity:"CRITICAL",epss_score:0.33,epss_percentile:0.97,matched_vendor:"sonicwall",cpe_vendors:["sonicwall"]},
+    {cve_id:"CVE-2026-29990",published_at:iso(now()-1.6*DAY),description:"Microsoft Exchange Server elevation of privilege via improper token validation.",cvss_score:7.5,cvss_severity:"HIGH",epss_score:0.004,epss_percentile:0.71,matched_vendor:"exchange",cpe_vendors:["microsoft"]},
+    {cve_id:"CVE-2026-20951",published_at:iso(now()-2*DAY),description:"Fortinet FortiOS SSL-VPN out-of-bounds write (also in KEV).",cvss_score:9.8,cvss_severity:"CRITICAL",epss_score:0.912,epss_percentile:0.998,matched_vendor:"fortinet",cpe_vendors:["fortinet"]}
   ],
   articles: [
-    {link:"https://www.bleepingcomputer.com/news/security/sample-1",title:"Fortinet warns of actively exploited FortiOS SSL-VPN zero-day",source:"BleepingComputer",published_at:"2026-11-04T01:10:00Z",summary:"Fortinet released emergency patches for an out-of-bounds write in FortiOS and FortiProxy SSL-VPN that is being exploited in the wild.",score:19,matched_terms:["fortinet","fortios","zero-day","actively exploited","exploited","cve-"],relevant:true},
-    {link:"https://www.cyber.gov.au/sample-2",title:"ACSC alert: ransomware actors targeting Australian managed service providers",source:"ASD ACSC",published_at:"2026-11-03T22:30:00Z",summary:"ASD's ACSC is aware of ransomware targeting Australian MSPs via exposed RMM tooling.",score:14,matched_terms:["ransomware","australian","msp","rmm"],relevant:true},
-    {link:"https://api.msrc.microsoft.com/sample-3",title:"CVE-2026-19844 Windows Common Log File System Driver Elevation of Privilege",source:"MSRC",published_at:"2026-11-03T18:00:00Z",summary:"Microsoft has confirmed exploitation. Patch Tuesday update available.",score:9,matched_terms:["microsoft","windows","exploited","cve-"],relevant:true},
-    {link:"https://thehackernews.com/sample-4",title:"New Linux botnet targets unpatched D-Link routers",source:"The Hacker News",published_at:"2026-11-03T12:00:00Z",summary:"A Mirai variant is spreading via old router flaws.",score:4,matched_terms:["linux","exploited"],relevant:true},
-    {link:"https://www.askwoody.com/sample-5",title:"November Patch Tuesday: what to hold and what to install",source:"AskWoody",published_at:"2026-11-03T09:00:00Z",summary:"Monthly guidance on Windows and Office updates.",score:5,matched_terms:["windows","office","patch now"],relevant:true},
-    {link:"https://thehackernews.com/sample-6",title:"Crypto exchange loses $40M in smart-contract exploit",source:"The Hacker News",published_at:"2026-11-02T20:00:00Z",summary:"DeFi platform drained after reentrancy bug.",score:0,matched_terms:[],relevant:false},
-    {link:"https://www.bleepingcomputer.com/sample-7",title:"Steam adds new parental controls",source:"BleepingComputer",published_at:"2026-11-02T15:00:00Z",summary:"Valve rolls out account-level restrictions.",score:0,matched_terms:[],relevant:false}
+    {link:"https://www.bleepingcomputer.com/news/security/sample-1",title:"Fortinet warns of actively exploited FortiOS SSL-VPN zero-day",source:"BleepingComputer",published_at:iso(now()-0.4*DAY),summary:"Fortinet released emergency patches for an out-of-bounds write in FortiOS and FortiProxy SSL-VPN that is being exploited in the wild.",score:19,matched_terms:["fortinet","fortios","zero-day","actively exploited","exploited","cve-"],relevant:true},
+    {link:"https://www.cyber.gov.au/sample-2",title:"ACSC alert: ransomware actors targeting Australian managed service providers",source:"ASD ACSC",published_at:iso(now()-0.6*DAY),summary:"ASD's ACSC is aware of ransomware targeting Australian MSPs via exposed RMM tooling.",score:14,matched_terms:["ransomware","australian","msp","rmm"],relevant:true},
+    {link:"https://api.msrc.microsoft.com/sample-3",title:"CVE-2026-19844 Windows Common Log File System Driver Elevation of Privilege",source:"MSRC",published_at:iso(now()-0.9*DAY),summary:"Microsoft has confirmed exploitation. Patch Tuesday update available.",score:9,matched_terms:["microsoft","windows","exploited","cve-"],relevant:true},
+    {link:"https://thehackernews.com/sample-4",title:"New Linux botnet targets unpatched D-Link routers",source:"The Hacker News",published_at:iso(now()-1.2*DAY),summary:"A Mirai variant is spreading via old router flaws.",score:4,matched_terms:["linux","exploited"],relevant:true},
+    {link:"https://www.askwoody.com/sample-5",title:"November Patch Tuesday: what to hold and what to install",source:"AskWoody",published_at:iso(now()-1.5*DAY),summary:"Monthly guidance on Windows and Office updates.",score:5,matched_terms:["windows","office","patch now"],relevant:true},
+    {link:"https://api.msrc.microsoft.com/sample-6",title:"Chromium CVE-2026-76031: Use after free",source:"MSRC",published_at:iso(now()-1.1*DAY),summary:"Edge inherits this Chromium fix.",score:0,matched_terms:["chromium-edge-batch"],relevant:false},
+    {link:"https://thehackernews.com/sample-7",title:"Crypto exchange loses $40M in smart-contract exploit",source:"The Hacker News",published_at:iso(now()-2*DAY),summary:"DeFi platform drained after reentrancy bug.",score:0,matched_terms:[],relevant:false}
+  ],
+  runs: [
+    {kind:"kev",sent_at:iso(now()-0.5*DAY),item_count:2},{kind:"news-collect",sent_at:iso(now()-0.04*DAY),item_count:37},
+    {kind:"cve-watch",sent_at:iso(now()-0.2*DAY),item_count:2},{kind:"kev-enrich",sent_at:iso(now()-0.1*DAY),item_count:60},{kind:"news",sent_at:iso(now()-0.5*DAY),item_count:8}
   ]
 };
 
-const SIGNALS = new Set(["zero-day","0-day","actively exploited","in the wild","exploited","ransomware","critical","rce","remote code execution","authentication bypass","patch now","emergency","out-of-band","cve-","australia","australian","msp","mssp","rmm","supply chain","phishing","data breach"]);
-
-let data = { kev: [], articles: [] };
+let data = { kev: [], watch: [], articles: [], runs: [] };
+const state = { tab: "overview", q: "", days: 30, chips: { sev: new Set(), vendor: new Set(), source: new Set(), flags: new Set(["relevant"]) } };
+const charts = {};
 const $ = (s) => document.querySelector(s);
+const $$ = (s) => [...document.querySelectorAll(s)];
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-const fmtDate = (s) => s ? new Date(s).toLocaleDateString("en-AU", {day:"2-digit", month:"short"}) : "";
-const fmtDT = (s) => s ? new Date(s).toLocaleString("en-AU", {day:"2-digit", month:"short", hour:"2-digit", minute:"2-digit"}) : "";
+const fmtD = (s) => s ? new Date(s).toLocaleDateString("en-AU", {day:"2-digit", month:"short"}) : "–";
+const fmtDT = (s) => s ? new Date(s).toLocaleString("en-AU", {day:"2-digit", month:"short", hour:"2-digit", minute:"2-digit"}) : "–";
+const ago = (s) => { if (!s) return "never"; const m = Math.round((now() - new Date(s)) / 60000); return m < 60 ? `${m} min ago` : m < 1440 ? `${Math.round(m/60)} h ago` : `${Math.round(m/1440)} d ago`; };
+const sevOf = (r) => r.cvss_severity || (r.cvss_score != null ? (r.cvss_score >= 9 ? "CRITICAL" : r.cvss_score >= 7 ? "HIGH" : r.cvss_score >= 4 ? "MEDIUM" : "LOW") : null);
+const sevHtml = (r) => { const s = sevOf(r); return s ? `<span class="sev ${s}">${s} ${r.cvss_score ?? ""}</span>` : `<span class="sev NA">n/a</span>`; };
+const epssHtml = (r) => r.epss_score == null ? `<span class="muted mono">–</span>` : `<span class="epss"><span>${(r.epss_score*100).toFixed(1)}%</span><span class="trk"><span class="fill" style="width:${Math.max(2, r.epss_score*100)}%"></span></span></span>`;
+const isNew = (d) => d && (now() - new Date(d)) < DAY * 1.05;
+const tsOf = (r, k) => r[k] ? new Date(r[k]).getTime() : 0;
+const cssVar = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 
 async function sb(path) {
   const r = await fetch(`${SUPABASE_URL.replace(/\/+$/, "")}/rest/v1/${path}`, { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } });
-  if (!r.ok) throw new Error(`${path}: HTTP ${r.status}`);
+  if (!r.ok) throw new Error(`${path.split("?")[0]}: HTTP ${r.status}`);
   return r.json();
 }
 
@@ -159,86 +254,179 @@ async function load() {
   const live = SUPABASE_URL && SUPABASE_ANON_KEY;
   $("#demoNotice").hidden = !!live;
   $("#mode").textContent = live ? "live" : "sample data";
+  $("#dot").classList.toggle("off", !live);
   try {
     if (live) {
-      const since = new Date(Date.now() - 30 * 86400000).toISOString();
-      const [kev, articles] = await Promise.all([
-        sb(`kev_entries?order=date_added.desc&limit=200`),
-        sb(`articles?published_at=gte.${since}&order=score.desc,published_at.desc&limit=500`),
+      const since = new Date(now() - 90 * DAY).toISOString();
+      const [kev, watch, articles, runs] = await Promise.all([
+        sb(`kev_entries?order=date_added.desc&limit=1000`),
+        sb(`cve_watch?order=published_at.desc&limit=500`).catch(() => []),
+        sb(`articles?published_at=gte.${since}&order=score.desc,published_at.desc&limit=1000`),
+        sb(`digest_log?order=sent_at.desc&limit=50`).catch(() => []),
       ]);
-      data = { kev, articles };
-    } else {
-      data = SAMPLE;
-    }
-    $("#updated").textContent = `updated ${new Date().toLocaleString("en-AU")}`;
+      data = { kev, watch, articles, runs };
+    } else data = SAMPLE;
   } catch (e) {
-    $("#updated").textContent = `load failed: ${e.message}`;
+    $("#runs").textContent = `load failed: ${e.message}`;
+    return;
   }
-  fillSources();
-  render();
+  renderRuns(); buildChips(); render();
 }
 
-function fillSources() {
-  const sel = $("#src"); const cur = sel.value;
-  const srcs = [...new Set(data.articles.map(a => a.source))].sort();
-  sel.innerHTML = `<option value="">All</option>` + srcs.map(s => `<option${s === cur ? " selected" : ""}>${esc(s)}</option>`).join("");
+function renderRuns() {
+  const last = (k) => data.runs.find(r => r.kind === k);
+  const parts = [["KEV", "kev"], ["News", "news-collect"], ["CVE Watch", "cve-watch"], ["Enrich", "kev-enrich"], ["Digest", "news"]]
+    .map(([l, k]) => `${l} <b>${ago(last(k)?.sent_at)}</b>`);
+  $("#runs").innerHTML = parts.join(" · ");
+}
+
+function inWindow(ts) { return !state.days || ts >= now() - state.days * DAY; }
+function hit(s) { return !state.q || String(s).toLowerCase().includes(state.q); }
+function kevRows() { return data.kev.filter(k => inWindow(tsOf(k, "date_added")) && hit(`${k.cve_id} ${k.vendor} ${k.product} ${k.vuln_name}`)
+  && (!state.chips.sev.size || state.chips.sev.has(sevOf(k) || "NA")) && (!state.chips.vendor.size || state.chips.vendor.has(k.matched_vendor))
+  && (!state.chips.flags.has("ransomware") || k.ransomware === "Known") && (!state.chips.flags.has("new") || isNew(k.date_added))); }
+function watchRows() { const kevIds = new Set(data.kev.map(k => k.cve_id)); return data.watch.map(w => ({...w, in_kev: kevIds.has(w.cve_id)})).filter(w => inWindow(tsOf(w, "published_at")) && hit(`${w.cve_id} ${w.matched_vendor} ${w.description} ${(w.cpe_vendors||[]).join(" ")}`)
+  && (!state.chips.sev.size || state.chips.sev.has(sevOf(w) || "NA")) && (!state.chips.vendor.size || state.chips.vendor.has(w.matched_vendor))
+  && (!state.chips.flags.has("notkev") || !w.in_kev) && (!state.chips.flags.has("new") || isNew(w.published_at))); }
+function artRows() { return data.articles.filter(a => inWindow(tsOf(a, "published_at")) && hit(`${a.title} ${a.summary} ${(a.matched_terms||[]).join(" ")}`)
+  && (!state.chips.source.size || state.chips.source.has(a.source)) && (!state.chips.flags.has("relevant") || a.relevant) && (!state.chips.flags.has("new") || isNew(a.published_at))); }
+
+function buildChips() {
+  const row = $("#chipsRow"); row.innerHTML = "";
+  const add = (group, key, label, count, cls = "") => {
+    const b = document.createElement("button"); b.type = "button"; b.className = `chip ${cls}`; b.dataset.group = group; b.dataset.key = key;
+    b.setAttribute("aria-pressed", state.chips[group].has(key)); b.innerHTML = `${esc(label)}${count != null ? ` <span class="c">${count}</span>` : ""}`;
+    b.addEventListener("click", () => { const s = state.chips[group]; s.has(key) ? s.delete(key) : s.add(key); b.setAttribute("aria-pressed", s.has(key)); render(); });
+    row.appendChild(b);
+  };
+  const lbl = (t) => { const s = document.createElement("span"); s.className = "label"; s.textContent = t; row.appendChild(s); };
+  if (state.tab === "kev" || state.tab === "watch" || state.tab === "overview") {
+    lbl("Severity"); const pool = state.tab === "watch" ? data.watch : data.kev;
+    for (const s of ["CRITICAL", "HIGH", "MEDIUM", "LOW"]) add("sev", s, s.charAt(0) + s.slice(1).toLowerCase(), pool.filter(r => sevOf(r) === s).length, `sev-${s}`);
+    lbl("Vendor"); const vc = {}; for (const r of pool) vc[r.matched_vendor] = (vc[r.matched_vendor] || 0) + 1;
+    Object.entries(vc).sort((a, b) => b[1] - a[1]).slice(0, 10).forEach(([v, c]) => add("vendor", v, v, c));
+  }
+  if (state.tab === "articles") {
+    lbl("Source"); const sc = {}; for (const a of data.articles) sc[a.source] = (sc[a.source] || 0) + 1;
+    Object.entries(sc).sort((a, b) => b[1] - a[1]).forEach(([s, c]) => add("source", s, s, c));
+  }
+  lbl("Flags"); add("flags", "new", "New (24 h)");
+  if (state.tab === "kev" || state.tab === "overview") add("flags", "ransomware", "Ransomware known");
+  if (state.tab === "watch") add("flags", "notkev", "Not yet in KEV");
+  if (state.tab === "articles") add("flags", "relevant", "Relevant only");
 }
 
 function render() {
-  const q = $("#q").value.trim().toLowerCase();
-  const src = $("#src").value;
-  const days = Number($("#win").value);
-  const relOnly = $("#relOnly").checked;
-  const cutoff = days ? Date.now() - days * 86400000 : 0;
-  const hit = (s) => !q || String(s).toLowerCase().includes(q);
+  const kev = kevRows(), watch = watchRows(), arts = artRows();
+  $("#nKev").textContent = data.kev.filter(k => inWindow(tsOf(k, "date_added"))).length;
+  $("#nWatch").textContent = data.watch.filter(w => inWindow(tsOf(w, "published_at"))).length;
+  $("#nArt").textContent = data.articles.filter(a => a.relevant && inWindow(tsOf(a, "published_at"))).length;
+  $$("section[id^=tab-]").forEach(s => s.hidden = s.id !== `tab-${state.tab}`);
+  if (state.tab === "overview") renderOverview(kev, watch, arts);
+  renderKev(kev); renderWatch(watch); renderArts(arts);
+}
 
-  const kev = data.kev.filter(k => (!cutoff || new Date(k.date_added).getTime() >= cutoff) &&
-    hit(`${k.cve_id} ${k.vendor} ${k.product} ${k.vuln_name}`));
-  const arts = data.articles.filter(a => (!cutoff || new Date(a.published_at).getTime() >= cutoff) &&
-    (!src || a.source === src) && (!relOnly || a.relevant) &&
-    hit(`${a.title} ${a.summary} ${(a.matched_terms || []).join(" ")}`));
-
+function renderOverview(kev, watch, arts) {
   const rw = kev.filter(k => k.ransomware === "Known").length;
-  const due7 = kev.filter(k => k.due_date && (new Date(k.due_date) - Date.now()) < 7 * 86400000).length;
-  const relevant = data.articles.filter(a => a.relevant && (!cutoff || new Date(a.published_at).getTime() >= cutoff)).length;
-  const total = data.articles.filter(a => !cutoff || new Date(a.published_at).getTime() >= cutoff).length;
+  const due7 = kev.filter(k => k.due_date && (new Date(k.due_date) - now()) < 7 * DAY && (new Date(k.due_date) - now()) > -DAY).length;
+  const newKev = data.kev.filter(k => isNew(k.date_added)).length;
+  const newWatch = data.watch.filter(w => isNew(w.published_at)).length;
+  const crit = [...kev, ...watch].filter(r => sevOf(r) === "CRITICAL").length;
+  const relevant = data.articles.filter(a => a.relevant && inWindow(tsOf(a, "published_at"))).length;
+  const total = data.articles.filter(a => inWindow(tsOf(a, "published_at"))).length;
+  const wl = state.days ? `last ${state.days} d` : "all time";
   $("#strip").innerHTML = [
-    tile(kev.length, "KEV entries in scope", "", days ? `last ${days} d` : "all time"),
-    tile(rw, "with known ransomware use", rw ? "crit" : "", "patch first"),
-    tile(due7, "federal due within 7 days", "", "CISA BOD 22-01 deadline"),
-    tile(relevant, "relevant articles", "", `of ${total} collected`),
-    tile(total ? Math.round(100 - relevant / total * 100) : 0, "% noise removed", "", "by keyword scoring"),
+    tile(kev.length, "KEV in scope", wl, newKev ? "info" : ""), tile(rw, "ransomware known", "patch first", rw ? "crit" : ""),
+    tile(due7, "federal due ≤ 7 d", "CISA BOD 22-01", due7 ? "high" : ""), tile(newWatch, "new high-sev CVEs (24 h)", "not yet exploited", newWatch ? "high" : ""),
+    tile(crit, "critical (CVSS ≥ 9)", "KEV + watch", crit ? "crit" : ""), tile(relevant, "relevant articles", `of ${total} collected`, "info"),
+    tile(total ? Math.round(100 - relevant / total * 100) : 0, "% noise removed", "keyword scoring", ""),
   ].join("");
 
-  $("#kevCount").textContent = `${kev.length} shown`;
-  $("#kev tbody").innerHTML = kev.length ? kev.map(k => `
+  // KEV per day (last 30 days)
+  const days = [...Array(30)].map((_, i) => new Date(now() - (29 - i) * DAY).toISOString().slice(0, 10));
+  const cnt = Object.fromEntries(days.map(d => [d, 0])); for (const k of data.kev) if (k.date_added in cnt) cnt[k.date_added]++;
+  chart("cKev", "bar", { labels: days.map(d => d.slice(5)), datasets: [{ data: days.map(d => cnt[d]), backgroundColor: cssVar("--accent"), borderRadius: 3 }] },
+    { scales: { x: { ticks: { maxTicksLimit: 8 } }, y: { beginAtZero: true, ticks: { precision: 0 } } } });
+  // Severity doughnut
+  const sevs = ["CRITICAL", "HIGH", "MEDIUM", "LOW"]; const pool = [...kev, ...watch];
+  chart("cSev", "doughnut", { labels: sevs.map(s => s.charAt(0) + s.slice(1).toLowerCase()), datasets: [{ data: sevs.map(s => pool.filter(r => sevOf(r) === s).length), backgroundColor: [cssVar("--crit"), cssVar("--high"), cssVar("--med"), cssVar("--low")], borderWidth: 0 }] },
+    { cutout: "62%", plugins: { legend: { position: "right" } } });
+  // Articles by source
+  const sc = {}; for (const a of data.articles) if (a.relevant && inWindow(tsOf(a, "published_at"))) sc[a.source] = (sc[a.source] || 0) + 1;
+  const se = Object.entries(sc).sort((a, b) => b[1] - a[1]);
+  chart("cSrc", "bar", { labels: se.map(e => e[0]), datasets: [{ data: se.map(e => e[1]), backgroundColor: cssVar("--info"), borderRadius: 3 }] },
+    { indexAxis: "y", scales: { x: { beginAtZero: true, ticks: { precision: 0 } } } });
+
+  // Priority list: KEV ransomware → KEV by EPSS → watch by EPSS
+  const rank = (r, src) => (src === "kev" ? 1000 : 0) + (r.ransomware === "Known" ? 500 : 0) + (r.epss_score || 0) * 100 + (r.cvss_score || 0);
+  const items = [...kev.map(k => ({ ...k, _src: "kev", _why: `${k.ransomware === "Known" ? "ransomware use known · " : ""}exploited (KEV) · due ${fmtD(k.due_date)}` })),
+                 ...watch.filter(w => !w.in_kev).map(w => ({ ...w, _src: "watch", _why: `CVSS ${w.cvss_score} · EPSS ${w.epss_score == null ? "–" : (w.epss_score*100).toFixed(1) + "%"} · not in KEV` }))]
+    .sort((a, b) => rank(b, b._src) - rank(a, a._src)).slice(0, 6);
+  $("#prio").innerHTML = items.length ? items.map(r => `<div class="prio-row">${sevHtml(r)}<div><a class="t" href="https://nvd.nist.gov/vuln/detail/${esc(r.cve_id)}" target="_blank" rel="noopener">${esc(r.cve_id)}</a> · ${esc(r.vendor || r.matched_vendor)}${r.product ? " " + esc(r.product) : ""}<div class="why">${esc(r.vuln_name || (r.description || "").slice(0, 120))} · ${esc(r._why)}</div></div><span class="pill ${r._src === "kev" ? "kev" : "muted"}">${r._src === "kev" ? "KEV" : "watch"}</span></div>`).join("") : `<div class="empty">Nothing in the current window.</div>`;
+}
+
+function tile(n, label, sub, cls) { return `<div class="tile ${cls}"><span class="label">${esc(label)}</span><span class="n">${esc(n)}</span><span class="sub">${esc(sub)}</span></div>`; }
+
+function chart(id, type, cdata, opts) {
+  const fg = cssVar("--muted"), grid = cssVar("--line");
+  Chart.defaults.color = fg; Chart.defaults.borderColor = grid; Chart.defaults.font.family = cssVar("--sans");
+  if (charts[id]) charts[id].destroy();
+  charts[id] = new Chart($("#" + id), { type, data: cdata, options: { responsive: true, maintainAspectRatio: false, animation: false, plugins: { legend: { display: type === "doughnut" } }, ...opts } });
+}
+
+function sortRows(rows, table) {
+  const k = table.dataset.sort, dir = table.dataset.dir === "asc" ? 1 : -1;
+  return [...rows].sort((a, b) => { const x = a[k] ?? -Infinity, y = b[k] ?? -Infinity; return (x > y ? 1 : x < y ? -1 : 0) * dir; });
+}
+function markSorted(table) { table.querySelectorAll("th").forEach(th => { th.classList.toggle("sorted", th.dataset.k === table.dataset.sort); th.classList.toggle("asc", th.dataset.k === table.dataset.sort && table.dataset.dir === "asc"); }); }
+
+function renderKev(rows) {
+  const t = $("#kev"); markSorted(t); rows = sortRows(rows, t);
+  $("#kevCount").textContent = `${rows.length} shown`;
+  t.tBodies[0].innerHTML = rows.length ? rows.map(k => `
     <tr class="${k.ransomware === "Known" ? "rw" : ""}">
-      <td class="mono"><a href="https://nvd.nist.gov/vuln/detail/${esc(k.cve_id)}" target="_blank" rel="noopener">${esc(k.cve_id)}</a></td>
+      <td class="mono"><a href="https://nvd.nist.gov/vuln/detail/${esc(k.cve_id)}" target="_blank" rel="noopener">${esc(k.cve_id)}</a>${isNew(k.date_added) ? ` <span class="pill new">new</span>` : ""}</td>
+      <td>${sevHtml(k)}</td><td>${epssHtml(k)}</td>
       <td><div class="t">${esc(k.vendor)}</div><div class="s">${esc(k.product)}</div></td>
-      <td>${esc(k.vuln_name)}<div class="s">matched: <span class="chip">${esc(k.matched_vendor)}</span></div></td>
-      <td class="mono">${fmtDate(k.date_added)}</td>
-      <td class="mono">${fmtDate(k.due_date)}</td>
-      <td>${k.ransomware === "Known" ? `<span class="pill crit">Known</span>` : `<span class="pill muted">Unknown</span>`}</td>
-    </tr>`).join("") : `<tr><td colspan="6" class="empty">No KEV entries match.</td></tr>`;
-
-  $("#artCount").textContent = `${arts.length} shown`;
-  $("#arts tbody").innerHTML = arts.length ? arts.map(a => `
+      <td>${esc(k.vuln_name)}<div class="s">matched: <span class="kw">${esc(k.matched_vendor)}</span></div></td>
+      <td class="mono">${fmtD(k.date_added)}</td><td class="mono">${fmtD(k.due_date)}</td>
+      <td>${k.ransomware === "Known" ? `<span class="pill crit">Known</span>` : `<span class="pill muted">Unknown</span>`}</td></tr>`).join("")
+    : `<tr><td colspan="8" class="empty">No KEV entries match.</td></tr>`;
+}
+function renderWatch(rows) {
+  const t = $("#watch"); markSorted(t); rows = sortRows(rows, t);
+  $("#watchCount").textContent = `${rows.length} shown`;
+  t.tBodies[0].innerHTML = rows.length ? rows.map(w => `
     <tr>
-      <td class="mono"><span class="score">${a.score}</span> ${a.relevant ? `<span class="pill ok">kept</span>` : `<span class="pill muted">dropped</span>`}</td>
-      <td><div class="t"><a href="${esc(a.link)}" target="_blank" rel="noopener">${esc(a.title)}</a></div><div class="s">${esc((a.summary || "").slice(0, 180))}</div></td>
+      <td class="mono"><a href="https://nvd.nist.gov/vuln/detail/${esc(w.cve_id)}" target="_blank" rel="noopener">${esc(w.cve_id)}</a>${isNew(w.published_at) ? ` <span class="pill new">new</span>` : ""}</td>
+      <td>${sevHtml(w)}</td><td>${epssHtml(w)}</td>
+      <td><div class="t">${esc(w.matched_vendor)}</div><div class="s">${esc((w.cpe_vendors || []).slice(0, 3).join(", "))}</div></td>
+      <td>${esc((w.description || "").slice(0, 220))}${(w.description || "").length > 220 ? "…" : ""}</td>
+      <td class="mono">${fmtDT(w.published_at)}</td>
+      <td>${w.in_kev ? `<span class="pill kev">in KEV</span>` : `<span class="pill muted">watch</span>`}</td></tr>`).join("")
+    : `<tr><td colspan="7" class="empty">No CVEs match. (TI 04 populates this table.)</td></tr>`;
+}
+function renderArts(rows) {
+  const t = $("#arts"); markSorted(t); rows = sortRows(rows, t);
+  $("#artCount").textContent = `${rows.length} shown`;
+  t.tBodies[0].innerHTML = rows.length ? rows.map(a => `
+    <tr>
+      <td class="mono"><span class="t">${a.score}</span> ${a.relevant ? `<span class="pill ok">kept</span>` : `<span class="pill muted">dropped</span>`}</td>
+      <td><div class="t"><a href="${esc(a.link)}" target="_blank" rel="noopener">${esc(a.title)}</a>${isNew(a.published_at) ? ` <span class="pill new">new</span>` : ""}</div><div class="s">${esc((a.summary || "").slice(0, 180))}</div></td>
       <td>${esc(a.source)}</td>
-      <td><div class="chips">${(a.matched_terms || []).map(t => `<span class="chip ${SIGNALS.has(t) ? "sig" : ""}">${esc(t)}</span>`).join("") || `<span class="s">no matches</span>`}</div>
-          ${a.ai_reason ? `<div class="s">AI: ${esc(a.ai_reason)}</div>` : ""}</td>
-      <td class="mono">${fmtDT(a.published_at)}</td>
-    </tr>`).join("") : `<tr><td colspan="5" class="empty">No articles match.</td></tr>`;
+      <td><div class="chips">${(a.matched_terms || []).map(k => `<span class="kw ${SIGNALS.has(k) ? "sig" : ""}">${esc(k)}</span>`).join("") || `<span class="s">no matches</span>`}</div>${a.ai_reason ? `<div class="s">AI: ${esc(a.ai_reason)}</div>` : ""}</td>
+      <td class="mono">${fmtDT(a.published_at)}</td></tr>`).join("")
+    : `<tr><td colspan="5" class="empty">No articles match.</td></tr>`;
 }
 
-function tile(n, label, cls, sub) {
-  return `<div class="tile"><span class="label">${esc(label)}</span><span class="n ${cls}">${esc(n)}</span><span class="sub">${esc(sub)}</span></div>`;
-}
-
-["#q", "#src", "#win", "#relOnly"].forEach(s => $(s).addEventListener("input", render));
+// ----- wiring
+$$(".tab").forEach(b => b.addEventListener("click", () => { state.tab = b.dataset.tab; $$(".tab").forEach(x => x.setAttribute("aria-selected", x === b)); buildChips(); render(); try { localStorage.setItem("tiw.tab", state.tab); } catch {} }));
+$("#q").addEventListener("input", e => { state.q = e.target.value.trim().toLowerCase(); render(); });
+$("#win").addEventListener("change", e => { state.days = Number(e.target.value); buildChips(); render(); });
 $("#refresh").addEventListener("click", load);
+$$("th[data-k]").forEach(th => th.addEventListener("click", () => { const t = th.closest("table"); if (t.dataset.sort === th.dataset.k) t.dataset.dir = t.dataset.dir === "asc" ? "desc" : "asc"; else { t.dataset.sort = th.dataset.k; t.dataset.dir = "desc"; } render(); }));
+$("#theme").addEventListener("click", () => { const r = document.documentElement; const cur = r.dataset.theme || (matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark"); r.dataset.theme = cur === "dark" ? "light" : "dark"; try { localStorage.setItem("tiw.theme", r.dataset.theme); } catch {} render(); });
+try { const t = localStorage.getItem("tiw.theme"); if (t) document.documentElement.dataset.theme = t; const tab = localStorage.getItem("tiw.tab"); if (tab && $(`.tab[data-tab="${tab}"]`)) { state.tab = tab; $$(".tab").forEach(x => x.setAttribute("aria-selected", x.dataset.tab === tab)); } } catch {}
 load();
 </script>
 </body>

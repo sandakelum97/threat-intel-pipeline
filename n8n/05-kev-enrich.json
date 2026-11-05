@@ -1,0 +1,378 @@
+{
+  "name": "TI 05 \u2013 KEV Enrich",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "20 */2 * * *"
+            }
+          ]
+        }
+      },
+      "id": "f174b8eb-62c4-4e60-bd52-cd6f44be71f7",
+      "name": "Schedule",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -220,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// ====== DEMO CONFIG \u2013 move these to n8n Credentials / Variables before production ======\nreturn [{\n  json: {\n    SUPABASE_URL: \"https://YOUR-PROJECT.supabase.co\",\n    SUPABASE_SERVICE_KEY: \"YOUR-SERVICE-ROLE-KEY\",      // server-side only, never in the dashboard\n    TEAMS_WEBHOOK: \"https://YOUR-TENANT.webhook.office.com/webhookb2/....\",\n    DASHBOARD_URL: \"https://your-dashboard-url/\",      // linked at the bottom of every email/card\n    EMAIL_TO: \"tharakajce.97@gmail.com\",                       // comma-separated list for the team digest\n    EMAIL_FROM: \"Threat Intel <tharakajce.97@gmail.com>\",        // must match the SMTP credential account\n\n    // Vendors/products in client environments. Case-insensitive substring match on\n    // vendorProject + product (KEV) and title + summary (news).\n    VENDOR_ALLOWLIST: [\n      \"Microsoft\",\"Windows\",\"Exchange\",\"SharePoint\",\"Office\",\"Entra\",\"Azure\",\"Intune\",\n      \"Fortinet\",\"FortiGate\",\"FortiOS\",\"FortiManager\",\"FortiAnalyzer\",\"FortiClient\",\n      \"ConnectWise\",\"ScreenConnect\",\"NinjaOne\",\"Ninja RMM\",\n      \"Cisco\",\"Ivanti\",\"Citrix\",\"NetScaler\",\"VMware\",\"Broadcom\",\"Veeam\",\"SonicWall\",\n      \"Palo Alto\",\"PAN-OS\",\"GlobalProtect\",\"Apple\",\"iOS\",\"macOS\",\"Google\",\"Chrome\",\"Chromium\",\n      \"Mozilla\",\"Firefox\",\"Adobe\",\"Acrobat\",\"Atlassian\",\"Confluence\",\"Jira\",\"Oracle\",\n      \"SolarWinds\",\"Zoho\",\"ManageEngine\",\"Synology\",\"QNAP\",\"Ubiquiti\",\"UniFi\",\n      \"Dell\",\"Lenovo\",\"Progress\",\"MOVEit\",\"GitLab\",\"Jenkins\",\"OpenSSL\",\"Linux\",\"Ubuntu\",\n      \"Samba\",\"PaperCut\",\"Kaseya\",\"CrowdStrike\",\"Proofpoint\",\"ThreatLocker\",\"7-Zip\",\"WinRAR\",\n      \"Auvik\",\"Proxmox\",\"Hyper-V\",\"SQL Server\",\"Teams\",\"OneDrive\",\"Outlook\",\"Defender\"\n    ],\n\n    // High-signal phrases for news scoring (weight added to score)\n    SIGNAL_TERMS: {\n      \"zero-day\": 3, \"0-day\": 3, \"actively exploited\": 3, \"in the wild\": 3,\n      \"exploited\": 2, \"ransomware\": 2, \"critical\": 1, \"rce\": 2, \"remote code execution\": 2,\n      \"authentication bypass\": 2, \"patch now\": 2, \"emergency\": 2, \"out-of-band\": 2,\n      \"cve-\": 1, \"australia\": 2, \"australian\": 2, \"msp\": 2, \"mssp\": 2, \"rmm\": 2,\n      \"supply chain\": 1, \"phishing\": 1, \"data breach\": 1\n    },\n    MIN_SCORE: 3,                 // article is \"relevant\" at or above this\n    NEWS_MAX_AGE_DAYS: 7,         // ignore feed items older than this (MSRC feed returns its whole history)\n    KEV_LOOKBACK_DAYS: 14,        // on first run, only notify about KEV entries this recent\n    AI_ENABLED: false,            // flip to true once ANTHROPIC key is set in the AI node\n\n    // CVE Watch / enrichment (TI 04, TI 05)\n    NVD_API_KEY: \"YOUR-NVD-API-KEY\",   // https://nvd.nist.gov/developers/request-an-api-key\n    CVSS_MIN: 7.0,                     // CVE Watch keeps CVEs at or above this base score\n    CVE_LOOKBACK_HOURS: 48,            // NVD publication window per run\n    ENRICH_BATCH: 60                   // KEV rows enriched per TI 05 run\n  }\n}];",
+        "mode": "runOnceForAllItems"
+      },
+      "id": "8e6c2868-a51f-418b-87ac-3664cc088c3e",
+      "name": "Config",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        0,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $('Config').first().json.SUPABASE_URL }}/rest/v1/kev_entries?select=cve_id&enriched_at=is.null&order=date_added.desc&limit={{ $('Config').first().json.ENRICH_BATCH }}",
+        "options": {
+          "timeout": 60000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $('Config').first().json.SUPABASE_SERVICE_KEY }}"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Config').first().json.SUPABASE_SERVICE_KEY }}"
+            }
+          ]
+        }
+      },
+      "id": "fb254c5f-f772-4557-87bd-0f39e6f0556d",
+      "name": "Get unenriched KEV",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        220,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://services.nvd.nist.gov/rest/json/cves/2.0?cveId={{ $json.cve_id }}",
+        "options": {
+          "timeout": 60000,
+          "batching": {
+            "batch": {
+              "batchSize": 1,
+              "batchInterval": 700
+            }
+          }
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apiKey",
+              "value": "={{ $('Config').first().json.NVD_API_KEY }}"
+            }
+          ]
+        }
+      },
+      "id": "73aa6af1-150d-45c7-863f-6965b8182ae6",
+      "name": "NVD lookup",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        440,
+        300
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const pickCvss = (metrics) => {\n  const order = [['cvssMetricV40','4.0'],['cvssMetricV31','3.1'],['cvssMetricV30','3.0'],['cvssMetricV2','2.0']];\n  for (const [key, ver] of order) {\n    const arr = metrics?.[key];\n    if (Array.isArray(arr) && arr.length) {\n      const m = arr.find(x => x.type === 'Primary') || arr[0];\n      const d = m.cvssData || {};\n      const score = d.baseScore;\n      let sev = d.baseSeverity || m.baseSeverity;\n      if (!sev && typeof score === 'number') sev = score >= 9 ? 'CRITICAL' : score >= 7 ? 'HIGH' : score >= 4 ? 'MEDIUM' : 'LOW';\n      return { score, severity: sev ? String(sev).toUpperCase() : null, vector: d.vectorString || null, version: ver };\n    }\n  }\n  return { score: null, severity: null, vector: null, version: null };\n};\nconst cpeParts = (configurations) => {\n  const vendors = new Set(), products = new Set();\n  for (const c of configurations || []) for (const n of c.nodes || []) for (const m of n.cpeMatch || []) {\n    const p = String(m.criteria || '').split(':');\n    if (p.length > 4) { vendors.add(p[3]); products.add(p[4]); }\n  }\n  return { vendors: [...vendors], products: [...products] };\n};\nconst chunk = (arr, n) => { const out = []; for (let i = 0; i < arr.length; i += n) out.push(arr.slice(i, i + n)); return out; };\n\nconst wanted = $('Get unenriched KEV').all().map(i => i.json.cve_id);\nconst byId = {};\nfor (const item of $input.all()) {\n  const j = item.json || {};\n  const v = (j.vulnerabilities || [])[0]?.cve;\n  if (v?.id) byId[v.id] = pickCvss(v.metrics);\n}\nconst rows = wanted.map(id => {\n  const cv = byId[id] || { score: null, severity: null, vector: null, version: null };\n  return { cve_id: id, cvss_score: cv.score, cvss_severity: cv.severity, cvss_vector: cv.vector, cvss_version: cv.version };\n});\nreturn [{ json: { rows, ids: wanted, nvd_found: Object.keys(byId).length } }];",
+        "mode": "runOnceForAllItems"
+      },
+      "id": "15aae0ea-b660-48e3-b7e9-489c55747651",
+      "name": "Parse NVD",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const ids = $input.first().json.ids || [];\nconst chunk = (arr, n) => { const out = []; for (let i = 0; i < arr.length; i += n) out.push(arr.slice(i, i + n)); return out; };\nreturn chunk(ids, 100).map(c => ({ json: { cves: c.join(',') } }));",
+        "mode": "runOnceForAllItems"
+      },
+      "id": "90d09299-05b8-40d9-9add-eeb4ba59cb30",
+      "name": "EPSS batches",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://api.first.org/data/v1/epss?cve={{ $json.cves }}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "21c95ccc-c171-469b-9d3f-5d3db732ee33",
+      "name": "Fetch EPSS",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1100,
+        300
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const rows = $('Parse NVD').first().json.rows;\nconst epss = {};\nfor (const item of $input.all()) {\n  for (const d of (item.json?.data || [])) epss[d.cve] = { epss: Number(d.epss), percentile: Number(d.percentile) };\n}\nfor (const r of rows) {\n  const e = epss[r.cve_id];\n  r.epss_score = e ? e.epss : null;\n  r.epss_percentile = e ? e.percentile : null;\n}\nreturn [{ json: { rows, ids: rows.map(r => r.cve_id), epss_found: Object.keys(epss).length } }];",
+        "mode": "runOnceForAllItems"
+      },
+      "id": "6bad4106-776d-46fa-9232-2c54857567f1",
+      "name": "Merge EPSS",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1320,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const rows = $('Merge EPSS').first().json.rows;\nconst now = new Date().toISOString();\nfor (const r of rows) r.enriched_at = now;\nreturn [{ json: { rows, count: rows.length } }];",
+        "mode": "runOnceForAllItems"
+      },
+      "id": "3310f7dd-789c-4b21-9ca1-f00778e9bdcb",
+      "name": "Stamp enriched_at",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1540,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Config').first().json.SUPABASE_URL }}/rest/v1/kev_entries?on_conflict=cve_id",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $('Config').first().json.SUPABASE_SERVICE_KEY }}"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Config').first().json.SUPABASE_SERVICE_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "resolution=merge-duplicates,return=minimal"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.rows) }}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "7075628c-311c-4f89-9eef-f6482666286b",
+      "name": "Update kev_entries",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1760,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Config').first().json.SUPABASE_URL }}/rest/v1/digest_log",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $('Config').first().json.SUPABASE_SERVICE_KEY }}"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Config').first().json.SUPABASE_SERVICE_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=minimal"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ kind: 'kev-enrich', item_count: $('Stamp enriched_at').first().json.count, payload: {} }) }}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "99b85ec1-c81e-47cf-9901-74007dd3f45a",
+      "name": "Log run",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1980,
+        300
+      ],
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "connections": {
+    "Schedule": {
+      "main": [
+        [
+          {
+            "node": "Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config": {
+      "main": [
+        [
+          {
+            "node": "Get unenriched KEV",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get unenriched KEV": {
+      "main": [
+        [
+          {
+            "node": "NVD lookup",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "NVD lookup": {
+      "main": [
+        [
+          {
+            "node": "Parse NVD",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse NVD": {
+      "main": [
+        [
+          {
+            "node": "EPSS batches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "EPSS batches": {
+      "main": [
+        [
+          {
+            "node": "Fetch EPSS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch EPSS": {
+      "main": [
+        [
+          {
+            "node": "Merge EPSS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge EPSS": {
+      "main": [
+        [
+          {
+            "node": "Stamp enriched_at",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Stamp enriched_at": {
+      "main": [
+        [
+          {
+            "node": "Update kev_entries",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update kev_entries": {
+      "main": [
+        [
+          {
+            "node": "Log run",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "meta": {
+    "instanceId": "threat-intel-demo"
+  }
+}
