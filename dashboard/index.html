@@ -79,6 +79,13 @@ button { font: inherit; cursor: pointer; }
 .prio { display: grid; gap: 8px; }
 .prio-row { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel2); }
 .prio-row .why { color: var(--muted); font-size: 12px; }
+.stories { display: grid; gap: 8px; }
+.story { padding: 10px 12px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel2); display: grid; gap: 4px; }
+.story .hd { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: baseline; }
+.story .hd a { font-weight: 500; }
+.story .meta { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+.story .sum { font-size: 13px; color: var(--fg); opacity: .9; }
+.story .score { font-family: var(--mono); font-size: 11px; color: var(--accent); border: 1px solid var(--accent); border-radius: 10px; padding: 0 6px; }
 
 .bar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg); padding-block: 8px; margin-bottom: 10px; display: grid; gap: 8px; }
 .row { display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center; }
@@ -160,7 +167,10 @@ footer { color: var(--muted); font-size: 12px; margin-top: 24px; }
     <div class="card"><h2>Severity mix · KEV + CVE Watch</h2><div class="chartbox"><canvas id="cSev"></canvas></div></div>
     <div class="card"><h2>Relevant articles · by source</h2><div class="chartbox"><canvas id="cSrc"></canvas></div></div>
   </div>
-  <div class="card"><h2>Patch-first list · ranked by exploitation evidence then EPSS</h2><div class="prio" id="prio"></div></div>
+  <div class="charts" style="grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));">
+    <div class="card"><h2>Patch-first list · ranked by exploitation evidence then EPSS</h2><div class="prio" id="prio"></div></div>
+    <div class="card"><div class="sect-head"><h2>Top stories · highest-scoring articles</h2><span class="count" id="storiesCount"></span></div><div class="stories" id="stories"></div></div>
+  </div>
 </section>
 
 <section id="tab-kev" hidden>
@@ -374,8 +384,21 @@ function renderOverview(kev, watch, arts) {
   const items = [...kev.map(k => ({ ...k, _src: "kev", _why: `${k.ransomware === "Known" ? "ransomware use known · " : ""}exploited (KEV) · due ${fmtD(k.due_date)}` })),
                  ...watch.filter(w => !w.in_kev).map(w => ({ ...w, _src: "watch", _why: `CVSS ${w.cvss_score} · EPSS ${w.epss_score == null ? "–" : (w.epss_score*100).toFixed(1) + "%"} · not in KEV` }))]
     .sort((a, b) => rank(b, b._src) - rank(a, a._src)).slice(0, 6);
+  renderStories(data.articles.filter(a => inWindow(tsOf(a, "published_at")) && hit(`${a.title} ${a.summary}`)));
   $("#prio").innerHTML = items.length ? items.map(r => `<div class="prio-row">${sevHtml(r)}<div>${r._batch ? `<span class="t">${esc(r._label)} <span class="pill muted">×${r._n}</span></span>` : `<a class="t" href="https://nvd.nist.gov/vuln/detail/${esc(r.cve_id)}" target="_blank" rel="noopener">${esc(r.cve_id)}</a>`} · ${esc(r.vendor || r.matched_vendor)}${r.product ? " " + esc(r.product) : ""}<div class="why">${esc(r.vuln_name || (r.description || "").slice(0, 120))} · ${esc(r._why)}</div></div><span class="pill ${r._src === "kev" ? "kev" : "muted"}">${r._src === "kev" ? "KEV" : "watch"}</span></div>`).join("") : `<div class="empty">Nothing in the current window.</div>`;
 }
+
+function renderStories(arts) {
+  const top = [...arts].filter(a => a.relevant).sort((a, b) => b.score - a.score || tsOf(b, "published_at") - tsOf(a, "published_at")).slice(0, 6);
+  $("#storiesCount").textContent = top.length ? `${top.length} of ${arts.filter(a => a.relevant).length}` : "";
+  $("#stories").innerHTML = top.length ? top.map(a => `<div class="story">
+    <div class="hd"><a href="${esc(a.link)}" target="_blank" rel="noopener">${esc(a.title)}</a><span class="score">${a.score}</span>${isNew(a.published_at) ? `<span class="pill new">new</span>` : ""}</div>
+    <div class="meta">${esc(a.source)} · ${fmtDT(a.published_at)}</div>
+    <div class="sum">${esc(clip(a.summary || "", 260))}</div>
+    <div class="chips">${(a.matched_terms || []).slice(0, 6).map(k => `<span class="kw ${SIGNALS.has(k) ? "sig" : ""}">${esc(k)}</span>`).join("")}</div>
+  </div>`).join("") : `<div class="empty">No relevant articles in the current window.</div>`;
+}
+function clip(t, n) { t = String(t).replace(/\s+/g, " ").trim(); if (t.length <= n) return t; const cut = t.slice(0, n); return cut.slice(0, Math.max(cut.lastIndexOf(". "), cut.lastIndexOf(" "))) + "…"; }
 
 function tile(n, label, sub, cls) { return `<div class="tile ${cls}"><span class="label">${esc(label)}</span><span class="n">${esc(n)}</span><span class="sub">${esc(sub)}</span></div>`; }
 
