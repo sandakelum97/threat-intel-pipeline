@@ -187,6 +187,7 @@ tr.rw td:first-child { box-shadow: inset 3px 0 0 var(--crit); }
 .chips { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
 .ai { margin-top: 4px; padding: 6px 8px; border-left: 3px solid var(--accent); background: var(--accent-soft); border-radius: 4px; font-size: 13px; }
 .act { margin-top: 3px; color: var(--accent); font-weight: 500; }
+.fix { margin-top: 4px; font-size: 12.5px; padding: 5px 8px; border: 1px dashed var(--line2); border-radius: 6px; } .fix b { font-weight: 600; } .fix a { color: var(--accent); }
 .kw { background: var(--chip); font-family: var(--mono); font-size: 11px; padding: 1px 6px; border-radius: 4px; }
 .kw.sig { background: transparent; border: 1px solid var(--line); }
 .empty { padding: 24px; color: var(--muted); text-align: center; grid-column: 1 / -1; }
@@ -316,7 +317,7 @@ const iso = (d) => new Date(d).toISOString();
 const SAMPLE = {
   notes: [{ note_date: iso(now()).slice(0,10), counts: { kev: 1, watch: 1, articles: 1 }, note: "Threat intel daily note – sample (last 24 h)\nSources: CISA KEV, NVD, FIRST EPSS, vendor PSIRTs, ACSC/CISA advisories, security news.\n\n1. NEW CONFIRMED-EXPLOITED VULNERABILITIES (CISA KEV) – 1\n   - CVE-2026-20951 | Fortinet – Fortinet FortiOS | CRITICAL 9.8 | EPSS 91% | ransomware use: Known\n     An unauthenticated attacker can run code on the firewall via SSL-VPN.\n     Action: Patch every client FortiGate exposing SSL-VPN today.\n\n2. NEW HIGH-SEVERITY CVEs IN OUR STACK – 1\n   - CVE-2026-30011 | Veeam | HIGH 8.8 | EPSS 1%\n     Action: Update Veeam Backup & Replication.\n\n3. RELEVANT NEWS AND ADVISORIES – 1\n   - [General] ACSC alert: ransomware targeting MSPs (ASD ACSC)\n     Why it matters: Check MFA on all RMM admin accounts.\n" }],
   kev: [
-    {cve_id:"CVE-2026-20951",vendor:"Fortinet",product:"FortiOS, FortiProxy",vuln_name:"FortiOS SSL-VPN out-of-bounds write",date_added:iso(now()-1*DAY).slice(0,10),due_date:iso(now()+20*DAY).slice(0,10),ransomware:"Known",matched_vendor:"fortinet",product_group:"Fortinet",cvss_score:9.8,cvss_severity:"CRITICAL",epss_score:0.912,epss_percentile:0.998,ai_summary:"An unauthenticated attacker on the internet can send a crafted request to the SSL-VPN and run code on the firewall itself. Exploitation is confirmed and tied to ransomware crews.",ai_reason:"Patch every client FortiGate exposing SSL-VPN today; if you can't, disable SSL-VPN until patched."},
+    {cve_id:"CVE-2026-20951",vendor:"Fortinet",product:"FortiOS, FortiProxy",vuln_name:"FortiOS SSL-VPN out-of-bounds write",date_added:iso(now()-1*DAY).slice(0,10),due_date:iso(now()+20*DAY).slice(0,10),ransomware:"Known",matched_vendor:"fortinet",product_group:"Fortinet",cvss_score:9.8,cvss_severity:"CRITICAL",epss_score:0.912,epss_percentile:0.998,ai_summary:"An unauthenticated attacker on the internet can send a crafted request to the SSL-VPN and run code on the firewall itself. Exploitation is confirmed and tied to ransomware crews.",ai_reason:"Patch every client FortiGate exposing SSL-VPN today; if you can't, disable SSL-VPN until patched.",product_name:"Fortinet FortiOS",remediation:"Update FortiOS to 7.4.8 / 7.2.12 or later (per release branch). Apply mitigations per vendor instructions.",advisory_url:"https://fortiguard.com/psirt/sample"},
     {cve_id:"CVE-2026-19844",vendor:"Microsoft",product:"Windows",vuln_name:"Windows CLFS driver privilege escalation",date_added:iso(now()-1*DAY).slice(0,10),due_date:iso(now()+13*DAY).slice(0,10),ransomware:"Unknown",matched_vendor:"microsoft",product_group:"Microsoft",cvss_score:7.8,cvss_severity:"HIGH",epss_score:0.21,epss_percentile:0.96,ai_summary:"A local attacker with a foothold can abuse the CLFS log driver to become SYSTEM. It's a post-exploitation step, commonly chained after phishing.",ai_reason:"Deploy this month's Windows cumulative update via RMM; prioritise servers and admin workstations."},
     {cve_id:"CVE-2026-18207",vendor:"Google",product:"Chromium V8",vuln_name:"Chromium V8 type confusion",date_added:iso(now()-3*DAY).slice(0,10),due_date:iso(now()+18*DAY).slice(0,10),ransomware:"Unknown",matched_vendor:"chrom",product_group:"Google / Chrome",cvss_score:8.8,cvss_severity:"HIGH",epss_score:0.05,epss_percentile:0.89},
     {cve_id:"CVE-2026-17110",vendor:"ConnectWise",product:"ScreenConnect",vuln_name:"ScreenConnect authentication bypass",date_added:iso(now()-6*DAY).slice(0,10),due_date:iso(now()+5*DAY).slice(0,10),ransomware:"Known",matched_vendor:"connectwise",product_group:"ConnectWise",cvss_score:10,cvss_severity:"CRITICAL",epss_score:0.97,epss_percentile:0.999},
@@ -325,7 +326,7 @@ const SAMPLE = {
     {cve_id:"CVE-2025-50001",vendor:"Apple",product:"Multiple Products",vuln_name:"Apple WebKit memory corruption",date_added:iso(now()-22*DAY).slice(0,10),due_date:iso(now()-8*DAY).slice(0,10),ransomware:"Unknown",matched_vendor:"apple",product_group:"Apple",cvss_score:null,cvss_severity:null,epss_score:null,epss_percentile:null}
   ],
   watch: [
-    {cve_id:"CVE-2026-30011",published_at:iso(now()-0.3*DAY),description:"Veeam Backup & Replication allows an authenticated user to execute arbitrary code via a crafted restore request.",cvss_score:8.8,cvss_severity:"HIGH",epss_score:0.012,epss_percentile:0.84,matched_vendor:"veeam",product_group:"Veeam",cpe_vendors:["veeam"],ai_summary:"Any authenticated Veeam user can trigger code execution on the backup server through a malformed restore request. Backup servers are a favourite ransomware target because they hold the recovery keys.",ai_reason:"Patch client Veeam servers this week and confirm they are not reachable from user VLANs."},
+    {cve_id:"CVE-2026-30011",published_at:iso(now()-0.3*DAY),description:"Veeam Backup & Replication allows an authenticated user to execute arbitrary code via a crafted restore request.",cvss_score:8.8,cvss_severity:"HIGH",epss_score:0.012,epss_percentile:0.84,matched_vendor:"veeam",product_group:"Veeam",cpe_vendors:["veeam"],ai_summary:"Any authenticated Veeam user can trigger code execution on the backup server through a malformed restore request. Backup servers are a favourite ransomware target because they hold the recovery keys.",ai_reason:"Patch client Veeam servers this week and confirm they are not reachable from user VLANs.",product_name:"Veeam Backup & Replication",remediation:"Update Backup & Replication to 12.3.2 or later",advisory_url:"https://www.veeam.com/kb/sample"},
     {cve_id:"CVE-2026-30020",published_at:iso(now()-0.8*DAY),description:"SonicWall SMA 1000 series: unauthenticated path traversal leading to file disclosure.",cvss_score:9.1,cvss_severity:"CRITICAL",epss_score:0.33,epss_percentile:0.97,matched_vendor:"sonicwall",product_group:"SonicWall",cpe_vendors:["sonicwall"]},
     {cve_id:"CVE-2026-29990",published_at:iso(now()-1.6*DAY),description:"Microsoft Exchange Server elevation of privilege via improper token validation.",cvss_score:7.5,cvss_severity:"HIGH",epss_score:0.004,epss_percentile:0.71,matched_vendor:"exchange",product_group:"Microsoft",cpe_vendors:["microsoft"]},
     {cve_id:"CVE-2026-20951",published_at:iso(now()-2*DAY),description:"Fortinet FortiOS SSL-VPN out-of-bounds write (also in KEV).",cvss_score:9.8,cvss_severity:"CRITICAL",epss_score:0.912,epss_percentile:0.998,matched_vendor:"fortinet",product_group:"Fortinet",cpe_vendors:["fortinet"]},
@@ -347,7 +348,7 @@ const SAMPLE = {
 };
 
 let data = { kev: [], watch: [], articles: [], runs: [], notes: [] };
-const state = { tab: "overview", q: "", days: 30, from: null, to: null, view: { kev: "tiles", watch: "tiles", arts: "tiles" }, chips: { sev: new Set(), vendor: new Set(), source: new Set(), flags: new Set(["relevant"]) } };
+const state = { tab: "overview", q: "", days: 30, from: null, to: null, view: { kev: "tiles", watch: "tiles", arts: "tiles" }, chips: { sev: new Set(), vendor: new Set(), software: new Set(), source: new Set(), flags: new Set(["relevant"]) } };
 const FLAG_LABELS = { new: "New (24 h)", ransomware: "Ransomware known", notkev: "Not yet in KEV", expand: "Expand browser batches", relevant: "Relevant only" };
 const charts = {};
 const $ = (s) => document.querySelector(s);
@@ -364,6 +365,7 @@ const epssHtml = (r) => r.epss_score == null ? `<span class="muted mono">EPSS �
 const isNew = (d) => d && (now() - new Date(d)) < DAY * 1.05;
 const tsOf = (r, k) => r[k] ? new Date(r[k]).getTime() : 0;
 const cssVar = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const fixLine = (r) => (r.remediation || r.required_action) ? `<div class="fix"><b>Fix:</b> ${esc(r.remediation || r.required_action)}${r.advisory_url ? ` · <a href="${safeUrl(r.advisory_url)}" target="_blank" rel="noopener">vendor advisory</a>` : ""}</div>` : "";
 const aiBlock = (r) => r.ai_summary ? `<div class="ai">${esc(r.ai_summary)}${r.ai_reason ? `<div class="act">→ ${esc(r.ai_reason)}</div>` : ""}</div>` : (r.ai_reason ? `<div class="act">→ ${esc(r.ai_reason)}</div>` : "");
 
 async function sb(path) {
@@ -428,7 +430,7 @@ function inWindow(ts) {
 }
 function hit(s) { return !state.q || String(s).toLowerCase().includes(state.q); }
 function kevRows() { return data.kev.filter(k => inWindow(tsOf(k, "date_added")) && hit(`${k.cve_id} ${k.vendor} ${k.product} ${k.vuln_name} ${k.product_group||""} ${k.ai_summary||""}`)
-  && (!state.chips.sev.size || state.chips.sev.has(sevOf(k) || "NA")) && (!state.chips.vendor.size || state.chips.vendor.has(k.product_group || "Other"))
+  && (!state.chips.sev.size || state.chips.sev.has(sevOf(k) || "NA")) && (!state.chips.vendor.size || state.chips.vendor.has(k.product_group || "Other")) && (!state.chips.software.size || state.chips.software.has(swOf(k)))
   && (!state.chips.flags.has("ransomware") || k.ransomware === "Known") && (!state.chips.flags.has("new") || isNew(k.date_added))); }
 function collapseBatches(rows) {
   if (state.chips.flags.has("expand")) return rows;
@@ -437,13 +439,14 @@ function collapseBatches(rows) {
   for (const [k, list] of Object.entries(groups)) {
     const top = list.reduce((a, b) => (b.cvss_score > a.cvss_score ? b : a));
     const [prod, ver] = k.split("@"); const name = prod.replace(/-/g, " ").replace(/\b\w/g, c => c.toUpperCase());
-    out.push({ ...top, _batch: true, _n: list.length, _label: `${name} ${ver}`, description: `${name} release ${ver} fixes ${list.length} CVEs (highest ${top.cvss_severity} ${top.cvss_score}: ${top.cve_id}). Action: update ${name} to ${ver}.`, epss_score: Math.max(...list.map(x => x.epss_score || 0)) || null, in_kev: list.some(x => x.in_kev) });
+    out.push({ ...top, _batch: true, _n: list.length, _label: `${name} ${ver}`, description: `${name} release ${ver} fixes ${list.length} CVEs (highest ${top.cvss_severity} ${top.cvss_score}: ${top.cve_id}).`, remediation: `Update ${name} to ${ver} or later`, advisory_url: top.advisory_url || null, epss_score: Math.max(...list.map(x => x.epss_score || 0)) || null, in_kev: list.some(x => x.in_kev) });
   }
   return out;
 }
 function watchRows() { const kevIds = new Set(data.kev.map(k => k.cve_id)); return collapseBatches(data.watch.map(w => ({...w, in_kev: kevIds.has(w.cve_id)})).filter(w => inWindow(tsOf(w, "published_at")) && hit(`${w.cve_id} ${w.matched_vendor} ${w.description} ${(w.cpe_vendors||[]).join(" ")} ${w.batch_key||""}`)
-  && (!state.chips.sev.size || state.chips.sev.has(sevOf(w) || "NA")) && (!state.chips.vendor.size || state.chips.vendor.has(w.product_group || "Other"))
+  && (!state.chips.sev.size || state.chips.sev.has(sevOf(w) || "NA")) && (!state.chips.vendor.size || state.chips.vendor.has(w.product_group || "Other")) && (!state.chips.software.size || state.chips.software.has(swOf(w)))
   && (!state.chips.flags.has("notkev") || !w.in_kev) && (!state.chips.flags.has("new") || isNew(w.published_at)))); }
+const swOf = (r) => r.product_name || (r.vendor ? `${r.vendor} ${r.product}` : null) || r.product_group || "Other";
 const artKept = (a) => a.relevant && a.ai_verdict !== false;
 function artRows() { return data.articles.filter(a => inWindow(tsOf(a, "published_at")) && hit(`${a.title} ${a.summary} ${(a.matched_terms||[]).join(" ")}`)
   && (!state.chips.source.size || state.chips.source.has(a.source)) && (!state.chips.vendor.size || state.chips.vendor.has(a.product_group || "General")) && (!state.chips.flags.has("relevant") || artKept(a)) && (!state.chips.flags.has("new") || isNew(a.published_at))); }
@@ -470,7 +473,9 @@ function buildFilters() {
     const pool = t === "watch" ? data.watch : data.kev;
     dd("sev", "Severity", ["CRITICAL", "HIGH", "MEDIUM", "LOW"].map(s => [s, s.charAt(0) + s.slice(1).toLowerCase(), pool.filter(r => sevOf(r) === s).length]), k => `sev-${k}`);
     const vc = {}; for (const r of pool) { const g = r.product_group || "Other"; vc[g] = (vc[g] || 0) + 1; }
-    dd("vendor", "Product", Object.entries(vc).sort((a, b) => b[1] - a[1]).map(([v, c]) => [v, v, c]));
+    dd("vendor", "Product group", Object.entries(vc).sort((a, b) => b[1] - a[1]).map(([v, c]) => [v, v, c]));
+    const swc = {}; for (const r of pool) { const g = swOf(r); swc[g] = (swc[g] || 0) + 1; }
+    dd("software", "Software", Object.entries(swc).sort((a, b) => b[1] - a[1]).slice(0, 40).map(([v, c]) => [v, v, c]));
   }
   if (t === "articles") {
     const pc = {}; for (const a of data.articles) if (artKept(a)) { const g = a.product_group || "General"; pc[g] = (pc[g] || 0) + 1; }
@@ -496,6 +501,7 @@ function syncCounts() {
   for (const [group, set] of Object.entries(state.chips)) for (const key of set) {
     if (group === "flags" && !tabFlags.includes(key)) continue;
     if (group === "source" && state.tab !== "articles") continue;
+    if (group === "software" && state.tab === "articles") continue;
     const label = group === "flags" ? FLAG_LABELS[key] || key : group === "sev" ? key.charAt(0) + key.slice(1).toLowerCase() : key;
     const el = document.createElement("span"); el.className = "act-chip"; el.innerHTML = `${esc(label)}<button type="button" aria-label="Remove filter ${esc(label)}"><svg class="i" style="width:12px;height:12px"><use href="#i-x"/></svg></button>`;
     el.querySelector("button").addEventListener("click", () => { set.delete(key); buildFilters(); render(); });
@@ -618,16 +624,16 @@ function renderKev(rows) {
   $("#kevGrid").innerHTML = rows.length ? rows.map(k => `<article class="g ${k.ransomware === "Known" ? "rw" : ""}">
       <div class="top"><a class="id" href="${cveUrl(k.cve_id)}" target="_blank" rel="noopener">${esc(k.cve_id)}</a>${sevHtml(k)}${isNew(k.date_added) ? `<span class="pill new">new</span>` : ""}${k.ransomware === "Known" ? `<span class="pill crit">ransomware</span>` : ""}<span class="spacer"></span><span class="grp">${esc(k.product_group || "Other")}</span></div>
       <div class="ttl">${esc(k.vuln_name)}</div>
-      <div class="meta"><span>${esc(k.vendor)} ${esc(k.product)}</span></div>
-      ${k.ai_summary ? aiBlock(k) : `<div class="sum">${esc((k.description || "").slice(0, 200))}</div>`}
+      <div class="meta"><span>${esc(k.product_name || `${k.vendor} ${k.product}`)}</span></div>
+      ${k.ai_summary ? aiBlock(k) : `<div class="sum">${esc((k.description || "").slice(0, 200))}</div>`}${fixLine(k)}
       <div class="ft"><span>${epssHtml(k)}</span><span class="mono">added ${fmtD(k.date_added)} · due ${fmtD(k.due_date)}</span></div>
     </article>`).join("") : `<div class="empty">No KEV entries match.</div>`;
   t.tBodies[0].innerHTML = rows.length ? rows.map(k => `
     <tr class="${k.ransomware === "Known" ? "rw" : ""}">
       <td class="mono"><a href="${cveUrl(k.cve_id)}" target="_blank" rel="noopener">${esc(k.cve_id)}</a>${isNew(k.date_added) ? ` <span class="pill new">new</span>` : ""}</td>
       <td>${sevHtml(k)}</td><td>${epssHtml(k)}</td>
-      <td><div class="t">${esc(k.product_group || "Other")}</div><div class="s">${esc(k.vendor)} ${esc(k.product)}</div></td>
-      <td><div class="t">${esc(k.vuln_name)}</div>${k.ai_summary ? aiBlock(k) : `<div class="s">${esc((k.description || "").slice(0, 160))}</div>`}</td>
+      <td><div class="t">${esc(k.product_name || k.product_group || "Other")}</div><div class="s">${esc(k.product_group || "")} · ${esc(k.vendor)} ${esc(k.product)}</div></td>
+      <td><div class="t">${esc(k.vuln_name)}</div>${k.ai_summary ? aiBlock(k) : `<div class="s">${esc((k.description || "").slice(0, 160))}</div>`}${fixLine(k)}</td>
       <td class="mono">${fmtD(k.date_added)}</td><td class="mono">${fmtD(k.due_date)}</td>
       <td>${k.ransomware === "Known" ? `<span class="pill crit">Known</span>` : `<span class="pill muted">Unknown</span>`}</td></tr>`).join("")
     : `<tr><td colspan="8" class="empty">No KEV entries match.</td></tr>`;
@@ -639,15 +645,16 @@ function renderWatch(rows) {
   showView("watch", "watchGrid", "watchTable");
   $("#watchGrid").innerHTML = rows.length ? rows.map(w => `<article class="g">
       <div class="top">${w._batch ? `<span class="id">${esc(w._label)}</span><span class="pill muted">×${w._n}</span>` : `<a class="id" href="${cveUrl(w.cve_id)}" target="_blank" rel="noopener">${esc(w.cve_id)}</a>`}${sevHtml(w)}${isNew(w.published_at) ? `<span class="pill new">new</span>` : ""}${w.in_kev ? `<span class="pill kev">in KEV</span>` : ""}<span class="spacer"></span><span class="grp">${esc(w.product_group || "Other")}</span></div>
-      ${w.ai_summary ? aiBlock(w) + `<div class="sum muted">${esc((w.description || "").slice(0, 160))}…</div>` : `<div class="sum">${esc((w.description || "").slice(0, 260))}${(w.description || "").length > 260 ? "…" : ""}</div>${w.ai_reason ? `<div class="act">→ ${esc(w.ai_reason)}</div>` : ""}`}
+      ${w.product_name && !w._batch ? `<div class="meta"><span>${esc(w.product_name)}</span></div>` : ""}
+      ${w.ai_summary ? aiBlock(w) + `<div class="sum muted">${esc((w.description || "").slice(0, 160))}…</div>` : `<div class="sum">${esc((w.description || "").slice(0, 260))}${(w.description || "").length > 260 ? "…" : ""}</div>${w.ai_reason ? `<div class="act">→ ${esc(w.ai_reason)}</div>` : ""}`}${fixLine(w)}
       <div class="ft"><span>${epssHtml(w)}</span><span class="mono">${w._batch ? "release batch" : esc(w.matched_vendor)} · ${fmtDT(w.published_at)}</span></div>
     </article>`).join("") : `<div class="empty">No CVEs match. (TI 04 populates this table.)</div>`;
   t.tBodies[0].innerHTML = rows.length ? rows.map(w => `
     <tr>
       <td class="mono">${w._batch ? `<span class="t">${esc(w._label)}</span> <span class="pill muted">×${w._n}</span>` : `<a href="${cveUrl(w.cve_id)}" target="_blank" rel="noopener">${esc(w.cve_id)}</a>`}${isNew(w.published_at) ? ` <span class="pill new">new</span>` : ""}</td>
       <td>${sevHtml(w)}</td><td>${epssHtml(w)}</td>
-      <td><div class="t">${esc(w.product_group || "Other")}</div><div class="s">${w._batch ? "release batch" : esc(w.matched_vendor)}</div></td>
-      <td>${w.ai_summary ? aiBlock(w) + `<div class="s">${esc((w.description || "").slice(0, 140))}…</div>` : `${esc((w.description || "").slice(0, 220))}${(w.description || "").length > 220 ? "…" : ""}${w.ai_reason ? `<div class="act">→ ${esc(w.ai_reason)}</div>` : ""}`}</td>
+      <td><div class="t">${esc(w.product_name || w.product_group || "Other")}</div><div class="s">${esc(w.product_group || "")}${w._batch ? " · release batch" : ""}</div></td>
+      <td>${w.ai_summary ? aiBlock(w) + `<div class="s">${esc((w.description || "").slice(0, 140))}…</div>` : `${esc((w.description || "").slice(0, 220))}${(w.description || "").length > 220 ? "…" : ""}${w.ai_reason ? `<div class="act">→ ${esc(w.ai_reason)}</div>` : ""}`}${fixLine(w)}</td>
       <td class="mono">${fmtDT(w.published_at)}</td>
       <td>${w.in_kev ? `<span class="pill kev">in KEV</span>` : `<span class="pill muted">watch</span>`}</td></tr>`).join("")
     : `<tr><td colspan="7" class="empty">No CVEs match. (TI 04 populates this table.)</td></tr>`;

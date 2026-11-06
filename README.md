@@ -30,7 +30,7 @@ kept/dropped articles and *why* each was kept.
 1. Open the SQL editor in your Supabase project and run `supabase/schema.sql`.
 2. Note the **Project URL**, the **service_role** key (for n8n) and the **anon** key (for the dashboard).
 
-Also run `supabase/migration-002-cvss-epss.sql` (CVSS/EPSS columns, `cve_watch` table), `supabase/migration-003-batch-key.sql` (browser release batching), `supabase/migration-004-groups-ai.sql` (product groups + AI summary columns) and `supabase/migration-005-ticket-notes.sql` (`ticket_notes` table for TI 07).
+Also run `supabase/migration-002-cvss-epss.sql` (CVSS/EPSS columns, `cve_watch` table), `supabase/migration-003-batch-key.sql` (browser release batching), `supabase/migration-004-groups-ai.sql` (product groups + AI summary columns) `supabase/migration-005-ticket-notes.sql` (`ticket_notes` table for TI 07) and `supabase/migration-006-remediation.sql` (fix versions, advisory link, software name).
 
 ### 1c. Claude API key (summaries)
 In n8n: **Credentials → Create → Anthropic** → paste your API key, name it **`Anthropic account`**. The Claude nodes in TI 01/04/05/06 reference it by that name. Cost: Haiku, roughly US$0.001 per item; the Max plan's monthly API credit covers it. Set `AI_ENABLED: false` in Config to switch summaries off (emails still send).
@@ -134,7 +134,7 @@ card says "CVE-2026-xxxx – 14 devices across 3 clients" instead of just listin
 ```
 n8n/00-verify-data.json      n8n/01-kev-monitor.json      n8n/02-news-collector.json   n8n/03-daily-digest.json
 n8n/04-cve-watch.json        n8n/05-kev-enrich.json       n8n/06-ai-summaries.json     n8n/07-ticket-note.json
-supabase/schema.sql + migration-002..005.sql              dashboard/index.html         docs/architecture.mmd / .png
+supabase/schema.sql + migration-002..006.sql              dashboard/index.html         docs/architecture.mmd / .png
 ```
 
 ## Feed URLs used

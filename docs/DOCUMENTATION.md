@@ -1,8 +1,12 @@
 ---
 title: "Threat Intel Pipeline — Project Documentation"
 subtitle: "Automated vulnerability and threat-intelligence collection for an MSSP"
+author: "Tharaka D. — Security Engineer, Subnet (TGT Global)"
 date: "November 2026"
 ---
+
+**Author:** Tharaka D. — Security Engineer (L2/L3), Subnet, via TGT Global · GitHub `sandakelum97`
+**Version:** 1.1 · November 2026 · Repository: `threat-intel-pipeline` (private)
 
 # 1. What this project is, in plain words
 
@@ -56,6 +60,59 @@ Everything runs on free or already-paid-for services: **n8n** (the workflow engi
 | Email | Gmail SMTP (app password) | Google | Available now; Teams webhook is one node swap away. |
 | Dashboard | Single static HTML file (Chart.js) | Vercel | No server, no build step, loads straight from Supabase with the public (anon) key. |
 | Source control | Git, private GitHub repo | GitHub | Config placeholders only; keys never leave the laptop. |
+
+# 2.1 Toolset — everything used to build and run it
+
+| Tool | Version / plan | Role | Notes |
+|---|---|---|---|
+| **n8n** | 2.35 (self-hosted, `npm install -g n8n`) | Workflow engine; every pipeline step is a node | Runs on the laptop under Node.js 22 (installed with nvm-windows; Node 26 is not supported by n8n). UI at `localhost:5678`. |
+| **Node.js** | 22 LTS via nvm-windows | Runtime for n8n | |
+| **Supabase** | Free project | PostgreSQL database + PostgREST REST API + Row Level Security | All data lives here; n8n writes with the service key, the dashboard reads with the anon key. |
+| **Claude (Anthropic API)** | `claude-haiku-5-5`, Max-plan API credit | Summaries, action lines, article relevance verdict | Called from n8n HTTP Request nodes with the "Anthropic account" credential. Extended thinking disabled so replies fit the token budget. |
+| **CISA KEV** | Public JSON feed | Confirmed-exploited CVEs | Source of truth for "is this being attacked". |
+| **NVD API 2.0** | Free API key | CVE details, CVSS, CPE, version ranges, references | Key raises the rate limit to 50 requests / 30 s; the workflows throttle to stay under it. |
+| **FIRST EPSS API** | Public | Exploit probability | 100 CVEs per call. |
+| **RSS feeds** | Public | News and advisories | BleepingComputer, The Hacker News, AskWoody, ACSC alerts & advisories, CISA advisories, MSRC, Fortinet PSIRT. |
+| **Gmail SMTP** | App password | Email delivery | `smtp.gmail.com:465`, credential "SMTP account" in n8n. |
+| **Vercel** | Hobby | Hosts the dashboard | Static HTML; redeploys on every push to GitHub. |
+| **GitHub** | Private repo | Source control | Config placeholders only. |
+| **Chart.js** | 4.4.1 from cdnjs (SRI-pinned) | Dashboard charts | |
+| **Google Fonts** | Fira Sans / Fira Code | Dashboard typography | |
+| **Python 3** | — | `build_v3.py` generator that produces the eight workflow JSON files from one source (shared Config, helpers, email templates) | Keeps the Config block identical across workflows. |
+| **Playwright (Chromium)** | — | Automated render checks of the dashboard (desktop, mobile, dark/light) and PDF build of this document | Development only. |
+| **Claude Code / Cowork** | — | Development assistant used to build, test and deploy the project | Development only. |
+
+# 2.2 How it works, end to end
+
+Follow one vulnerability through the system:
+
+1. **06:00 — TI 01 wakes up** (n8n's scheduler). It downloads the CISA KEV catalogue — a JSON file of every CVE the US government has confirmed is being exploited.
+2. **Filter.** Each entry's vendor and product are compared with `PRODUCT_GROUPS` (the list of what we manage). "Fortinet FortiOS" matches; "Siemens SCADA" does not. The matching entries are tagged with a product group ("Fortinet").
+3. **Store.** The matches are sent to Supabase with the instruction "insert, ignore duplicates, return what you inserted". Supabase replies with only the brand-new rows, so the workflow knows exactly what is new without keeping its own memory.
+4. **Summarise.** For the new rows only, a prompt is sent to Claude containing the CVE id, product, CISA's description and required action. Claude replies with JSON: a two-sentence summary and a one-sentence action. The reply is parsed and saved.
+5. **Email.** One HTML email is built (grouped by product group, with severity, ransomware flag, summary, action, fix) and sent by SMTP. A row is logged in `digest_log`.
+6. **08:20 — TI 05 enriches.** It picks up KEV rows missing a score, asks NVD for each (CVSS score, affected version ranges, references), asks FIRST for EPSS, builds the remediation line ("Update FortiOS to 7.4.8 / 7.2.12 or later"), asks Claude for a summary if missing, and writes everything back.
+7. **Every 6 h — TI 04** does the same for CVEs that are *not yet* in KEV: pulls the last 48 h of NVD, keeps CVSS ≥ 7 in our stack, adds EPSS and remediation, summarises, emails.
+8. **Hourly — TI 02** reads the news feeds and scores articles; **TI 06** summarises the relevant ones and gives a relevance verdict.
+9. **07:00 — TI 07** reads the last 24 h from all three tables and writes the plain-text ticket note; emails it and stores it.
+10. **Any time — the dashboard** reads the tables with the public key and renders them; the pipeline tiles read `digest_log` to show when each workflow last ran.
+11. **Before a demo — TI 00** re-checks a sample of everything against the live sources.
+
+# 2.3 Remediation — "what do I actually do?"
+
+Every CVE now carries a concrete fix, derived from the sources rather than guessed:
+
+| Field | Where it comes from | Example |
+|---|---|---|
+| `product_name` | The CPE (vendor:product) NVD attaches to the CVE | *Google Brotli* (not just the "Google / Chrome" group) |
+| `fixed_versions` | NVD's affected version ranges — `versionEndExcluding` is the first version that is **not** vulnerable, i.e. the fix | `[{product: "Brotli", fixed: "1.2.0"}]` |
+| `advisory_url` | The NVD reference tagged *Patch* or *Vendor Advisory* | the vendor's release notes / PSIRT page |
+| `remediation` | Sentence built from the above; for KEV entries CISA's own `required_action` is appended | "Update Brotli to 1.2.0 or later" / "Update FortiOS to 7.4.8 / 7.2.12 or later (per release branch). Apply mitigations per vendor instructions…" |
+| `ai_reason` | Claude, given the known fix as input, asked to start with the concrete action | "Update Brotli-dependent apps to 1.2.0+ on managed endpoints this week; low exploitation likelihood so far." |
+
+The dashboard shows it as a **Fix:** line with a *vendor advisory* link on every card and table row, the emails carry the same line, and the ticket note prints it under *Action*. Browser release batches (Chrome, Firefox, Edge) get "Update Chrome to 157.0.x or later" automatically. Where NVD has not yet published version data (common in the first days after a CVE is assigned), the field is empty and fills in when TI 05 revisits the row.
+
+The dashboard's **Software** filter uses `product_name`, so you can filter to "Fortinet FortiOS" or "Veeam Backup & Replication" rather than the whole vendor group.
 
 # 3. The workflows
 
@@ -163,13 +220,13 @@ Every run is kept in n8n (Executions tab) with the full data at each node, which
 
 | Table | One row per | Key columns |
 |---|---|---|
-| `kev_entries` | CVE in CISA KEV that matches our products | `cve_id` (PK), `vendor`, `product`, `vuln_name`, `description`, `required_action`, `date_added`, `due_date`, `ransomware`, `matched_vendor`, `product_group`, `cvss_score`, `cvss_severity`, `cvss_vector`, `cvss_version`, `epss_score`, `epss_percentile`, `ai_summary`, `ai_reason`, `enriched_at`, `created_at` |
-| `cve_watch` | NVD CVE with CVSS ≥ 7 in our stack | `cve_id` (PK), `published_at`, `description`, CVSS/EPSS columns as above, `matched_vendor`, `cpe_vendors[]`, `cpe_products[]`, `batch_key`, `product_group`, `ai_summary`, `ai_reason` |
+| `kev_entries` | CVE in CISA KEV that matches our products | `cve_id` (PK), `vendor`, `product`, `vuln_name`, `description`, `required_action`, `date_added`, `due_date`, `ransomware`, `matched_vendor`, `product_group`, `cvss_score`, `cvss_severity`, `cvss_vector`, `cvss_version`, `epss_score`, `epss_percentile`, `product_name`, `fixed_versions`, `advisory_url`, `remediation`, `ai_summary`, `ai_reason`, `enriched_at`, `created_at` |
+| `cve_watch` | NVD CVE with CVSS ≥ 7 in our stack | `cve_id` (PK), `published_at`, `description`, CVSS/EPSS columns as above, `matched_vendor`, `cpe_vendors[]`, `cpe_products[]`, `batch_key`, `product_group`, `product_name`, `fixed_versions`, `advisory_url`, `remediation`, `ai_summary`, `ai_reason` |
 | `articles` | News / advisory item | `link` (PK), `title`, `source`, `published_at`, `summary`, `score`, `matched_terms[]`, `relevant`, `ai_verdict`, `ai_summary`, `ai_reason`, `product_group` |
 | `ticket_notes` | Day | `note_date` (PK), `note` (text), `counts` (json) |
 | `digest_log` | Workflow run | `sent_at`, `kind` (`kev`, `news-collect`, `news`, `cve-watch`, `kev-enrich`, `ai-summaries`, `ticket-note`), `item_count`, `payload` |
 
-All tables have Row Level Security enabled with a read-only policy for the public (anon) key. Writes happen only from n8n with the service key. Schema and migrations are in `supabase/` (`schema.sql`, `migration-002` … `migration-005`).
+All tables have Row Level Security enabled with a read-only policy for the public (anon) key. Writes happen only from n8n with the service key. Schema and migrations are in `supabase/` (`schema.sql`, `migration-002` … `migration-006`).
 
 # 5. The dashboard
 
@@ -177,7 +234,9 @@ A single HTML file (`dashboard/index.html`), hosted on Vercel, reading Supabase 
 
 ## 5.1 Overview
 
-![Overview](screenshots/dashboard-overview-light.png)
+![Overview (live data, dark theme)](screenshots/dashboard-overview-live.jpg)
+
+![Overview (sample data, light theme)](screenshots/dashboard-overview-light.png)
 
 - **Pipeline status** tiles (top): one per scheduled workflow, showing when it last ran and whether that is on schedule (green) or later than expected (amber). These are *indicators, not buttons* — the workflows run themselves in n8n. Hover (or focus with the keyboard) for the schedule, last run time, last result and recent history.
 
@@ -193,9 +252,13 @@ A single HTML file (`dashboard/index.html`), hosted on Vercel, reading Supabase 
 
 Each tab has a **tile view** (cards: id, severity, product group, summary, action, EPSS bar, dates) and a **table view** (sortable columns) — toggle at the top right; the choice is remembered.
 
-![KEV with filters](screenshots/dashboard-kev-filters.png)
+![KEV table view (live)](screenshots/dashboard-kev-table-live.jpg)
 
-![Articles, dark theme](screenshots/dashboard-articles-dark.png)
+![KEV tiles with severity + date-range filters and the Fix line](screenshots/dashboard-kev-filters.png)
+
+![CVE Watch tiles (live)](screenshots/dashboard-cvewatch-live.jpg)
+
+![Articles (live)](screenshots/dashboard-articles-live.jpg)
 
 ![CVE Watch table, dark theme](screenshots/dashboard-cvewatch-table-dark.png)
 
@@ -203,7 +266,7 @@ Article badges: **kept** (keyword score and Claude both say relevant), **AI: ski
 
 ## 5.3 Ticket note
 
-![Ticket note](screenshots/dashboard-ticket-note.png)
+![Ticket note (live)](screenshots/dashboard-ticket-note-live.jpg)
 
 The latest TI 07 note with a one-click copy. It is plain text — it pastes cleanly into a ConnectWise ticket note.
 
@@ -287,12 +350,35 @@ Safeguards:
 | Dashboard login | Supabase Auth + RLS by user, if the link must be restricted. |
 | Decision logic | Feed Exploitation (KEV/EPSS), Technical Impact (CVSS) and tenant exposure into an SSVC decision tree — the research component. |
 
-# 11. Repository layout
+# 11. Repository structure
 
 ```
-n8n/                 00-verify-data … 07-ticket-note (workflow JSON, placeholders only)
-supabase/            schema.sql, migration-002 … migration-005
-dashboard/index.html the web dashboard (keys blank in git)
-docs/                this document, screenshots/, architecture.mmd / .png
-README.md            setup, demo script, tuning, security notes
+threat-intel-pipeline/
+├── README.md                       setup (20 min), demo script, tuning knobs, security notes
+├── .gitignore                      keeps filled-in config, .env and local state out of git
+├── n8n/                            one JSON per workflow — import into n8n (Config holds placeholders)
+│   ├── 00-verify-data.json         manual: KEV / NVD / EPSS / link / AI-summary verification report
+│   ├── 01-kev-monitor.json         daily: CISA KEV → filter → store → summarise → email
+│   ├── 02-news-collector.json      hourly: RSS → score → store
+│   ├── 03-daily-digest.json        weekdays: relevant articles → email
+│   ├── 04-cve-watch.json           6-hourly: NVD → filter CVSS ≥ 7 → EPSS → remediation → summarise → email
+│   ├── 05-kev-enrich.json          2-hourly: back-fill CVSS, EPSS, remediation, summaries on KEV rows
+│   ├── 06-ai-summaries.json        hourly: Claude summary + relevance verdict for articles
+│   ├── 07-ticket-note.json         weekdays: plain-text ticket note → email + ticket_notes table
+│   └── snippets/                   the Code-node JavaScript as readable .js files
+├── supabase/
+│   ├── schema.sql                  tables kev_entries, articles, digest_log + RLS policies
+│   ├── migration-002-cvss-epss.sql CVSS/EPSS columns, cve_watch table
+│   ├── migration-003-batch-key.sql browser release batching
+│   ├── migration-004-groups-ai.sql product_group, ai_summary, ai_reason
+│   ├── migration-005-ticket-notes.sql  ticket_notes table
+│   └── migration-006-remediation.sql   product_name, fixed_versions, advisory_url, remediation
+├── dashboard/
+│   └── index.html                  the whole dashboard (HTML + CSS + JS); keys blank in git
+└── docs/
+    ├── DOCUMENTATION.md / .pdf     this document
+    ├── architecture.mmd / .png     architecture diagram (Mermaid source + render)
+    └── screenshots/                n8n, dashboard and email screenshots used above
 ```
+
+**Conventions.** Workflow names are `TI nn – Name`; every workflow starts with Schedule → Config and ends with Log run. Node names are plain English and are referenced by name in code (`$('Config').first().json`), so renaming a node requires updating the code that reads it. Secrets never go in the repo: the Config node in git says `YOUR-PROJECT`, `YOUR-SERVICE-ROLE-KEY`; the live values exist only in n8n on the laptop.
