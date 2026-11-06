@@ -12,7 +12,7 @@
           ]
         }
       },
-      "id": "55178c7f-da07-45a3-bd56-fe54d5d5f367",
+      "id": "87485ad9-736b-4696-b2d7-9a80780ac9cd",
       "name": "Schedule",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
@@ -26,7 +26,7 @@
         "jsCode": "// ====== DEMO CONFIG \u2013 move secrets to n8n Credentials before production ======\nconst PRODUCT_GROUPS = {\n  // group name           : terms matched (case-insensitive) in KEV vendor/product, NVD CPE/description, article text\n  \"Microsoft\":            [\"Microsoft\",\"Windows\",\"Exchange\",\"SharePoint\",\"Office\",\"Entra\",\"Azure\",\"Intune\",\"Hyper-V\",\"SQL Server\",\"Teams\",\"OneDrive\",\"Outlook\",\"Defender\"],\n  \"Fortinet\":             [\"Fortinet\",\"FortiGate\",\"FortiOS\",\"FortiManager\",\"FortiAnalyzer\",\"FortiClient\"],\n  \"ConnectWise\":          [\"ConnectWise\",\"ScreenConnect\"],\n  \"NinjaOne\":             [\"NinjaOne\",\"Ninja RMM\"],\n  \"Cisco\":                [\"Cisco\"],\n  \"Ivanti\":               [\"Ivanti\"],\n  \"Citrix\":               [\"Citrix\",\"NetScaler\"],\n  \"VMware\":               [\"VMware\",\"Broadcom\"],\n  \"Veeam\":                [\"Veeam\"],\n  \"SonicWall\":            [\"SonicWall\"],\n  \"Palo Alto\":            [\"Palo Alto\",\"PAN-OS\",\"GlobalProtect\"],\n  \"Apple\":                [\"Apple\",\"iOS\",\"macOS\"],\n  \"Google / Chrome\":      [\"Google\",\"Chrome\",\"Chromium\"],\n  \"Mozilla\":              [\"Mozilla\",\"Firefox\"],\n  \"Adobe\":                [\"Adobe\",\"Acrobat\"],\n  \"Atlassian\":            [\"Atlassian\",\"Confluence\",\"Jira\"],\n  \"Oracle\":               [\"Oracle\"],\n  \"SolarWinds\":           [\"SolarWinds\"],\n  \"ManageEngine\":         [\"Zoho\",\"ManageEngine\"],\n  \"NAS\":                  [\"Synology\",\"QNAP\"],\n  \"Ubiquiti\":             [\"Ubiquiti\",\"UniFi\"],\n  \"Hardware OEM\":         [\"Dell\",\"Lenovo\"],\n  \"Progress / MOVEit\":    [\"Progress\",\"MOVEit\"],\n  \"DevOps\":               [\"GitLab\",\"Jenkins\"],\n  \"Linux / OSS\":          [\"OpenSSL\",\"Linux\",\"Ubuntu\",\"Samba\"],\n  \"PaperCut\":             [\"PaperCut\"],\n  \"Kaseya\":               [\"Kaseya\"],\n  \"Security tools\":       [\"CrowdStrike\",\"Proofpoint\",\"ThreatLocker\",\"Auvik\"],\n  \"Archivers\":            [\"7-Zip\",\"WinRAR\"],\n  \"Proxmox\":              [\"Proxmox\"],\n};\nreturn [{\n  json: {\n    SUPABASE_URL: \"https://YOUR-PROJECT.supabase.co\",\n    SUPABASE_SERVICE_KEY: \"YOUR-SERVICE-ROLE-KEY\",      // server-side only, never in the dashboard\n    TEAMS_WEBHOOK: \"https://YOUR-TENANT.webhook.office.com/webhookb2/....\",\n    DASHBOARD_URL: \"https://your-dashboard-url/\",      // linked at the bottom of every email/card\n    EMAIL_TO: \"tharakajce.97@gmail.com\",                       // comma-separated list for the team digest\n    EMAIL_FROM: \"Threat Intel <tharakajce.97@gmail.com>\",        // must match the SMTP credential account\n\n    PRODUCT_GROUPS,\n    VENDOR_ALLOWLIST: Object.values(PRODUCT_GROUPS).flat(),\n\n    // High-signal phrases for news scoring (weight added to score)\n    SIGNAL_TERMS: {\n      \"zero-day\": 3, \"0-day\": 3, \"actively exploited\": 3, \"in the wild\": 3,\n      \"exploited\": 2, \"ransomware\": 2, \"critical\": 1, \"rce\": 2, \"remote code execution\": 2,\n      \"authentication bypass\": 2, \"patch now\": 2, \"emergency\": 2, \"out-of-band\": 2,\n      \"cve-\": 1, \"australia\": 2, \"australian\": 2, \"msp\": 2, \"mssp\": 2, \"rmm\": 2,\n      \"supply chain\": 1, \"phishing\": 1, \"data breach\": 1\n    },\n    MIN_SCORE: 3,                 // article is \"relevant\" at or above this\n    NEWS_MAX_AGE_DAYS: 7,         // ignore feed items older than this (MSRC feed returns its whole history)\n    KEV_LOOKBACK_DAYS: 14,        // on first run, only notify about KEV entries this recent\n\n    // CVE Watch / enrichment (TI 04, TI 05)\n    NVD_API_KEY: \"YOUR-NVD-API-KEY\",   // https://nvd.nist.gov/developers/request-an-api-key\n    CVSS_MIN: 7.0,                     // CVE Watch keeps CVEs at or above this base score\n    CVE_LOOKBACK_HOURS: 48,            // NVD publication window per run\n    ENRICH_BATCH: 60,                  // KEV rows enriched per TI 05 run\n\n    // AI summaries (Claude). Credential \"Anthropic account\" is selected on the Claude nodes.\n    AI_ENABLED: true,\n    AI_MODEL: \"claude-haiku-5-5\",\n    AI_MAX_PER_RUN: 25,\n    AI_CONTEXT: \"We are an Australian MSSP running Microsoft 365/Defender XDR/Sentinel/Entra, Fortinet (FortiGate/FortiManager/FortiAnalyzer), ConnectWise and NinjaOne RMM, CrowdStrike Falcon, Proofpoint, ThreatLocker, Nessus and Auvik across ~50 SMB client tenants.\"\n  }\n}];",
         "mode": "runOnceForAllItems"
       },
-      "id": "377aa2d6-9d6b-4bc4-a638-ce471b7212e9",
+      "id": "93f513bf-0c84-40de-bd1d-ea3dc3e2b488",
       "name": "Config",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -56,7 +56,7 @@
           ]
         }
       },
-      "id": "61ca246d-74f0-4b2a-8afa-73a5955f02b7",
+      "id": "b9019921-fdbb-4637-b132-3d9e17c1f434",
       "name": "Get unsummarised articles",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -70,7 +70,7 @@
         "jsCode": "const rows = $input.all().map(i => i.json).filter(a => a && a.link);\nif (rows.length === 0) return [];\nreturn [{ json: { rows } }];",
         "mode": "runOnceForAllItems"
       },
-      "id": "1e3fd7d9-6543-45e8-99c1-a2c1cbda1ab3",
+      "id": "eb5e5ca0-f117-498c-8e2d-9701cf3e5d43",
       "name": "Rows",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -84,7 +84,7 @@
         "jsCode": "const cfg = $('Config').first().json;\nconst rows = $input.first().json.rows;\nif (!cfg.AI_ENABLED || rows.length === 0) return [{ json: { skip: true, prompt: 'Reply with {}' } }];\n// one prompt per browser-release batch instead of per CVE\nconst seenBatch = new Set();\nconst picked = [];\nfor (const r of rows) {\n  if (r.batch_key) { if (seenBatch.has(r.batch_key)) continue; seenBatch.add(r.batch_key); }\n  picked.push(r);\n  if (picked.length >= cfg.AI_MAX_PER_RUN) break;\n}\nreturn picked.map(r => ({ json: { key: r.batch_key || r['link'], prompt:\n  `${cfg.AI_CONTEXT}\\nYou write short threat-intel notes for our SOC analysts. Keep summary under 60 words and why under 45 words. Reply with JSON only, no markdown, exactly this shape: {\"summary\":\"2 plain-English sentences on what happened\",\"why\":\"1 sentence on why it matters (or does not) for our clients and what to do\",\"relevant\":true|false}\\n\\n` + `Article title: ${r.title}\\nSource: ${r.source}\\nFeed text: ${(r.summary || '').slice(0, 900)}` } }));",
         "mode": "runOnceForAllItems"
       },
-      "id": "fd6c0512-88f0-4363-b11a-998f36588dd8",
+      "id": "499ffa2b-360b-44be-ab61-4315321f7914",
       "name": "Prep AI",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -114,7 +114,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ model: $('Config').first().json.AI_MODEL, max_tokens: 900, messages: [{ role: 'user', content: $json.prompt }] }) }}",
+        "jsonBody": "={{ JSON.stringify({ model: $('Config').first().json.AI_MODEL, max_tokens: 900, thinking: { type: 'disabled' }, messages: [{ role: 'user', content: $json.prompt }] }) }}",
         "options": {
           "timeout": 60000,
           "batching": {
@@ -125,7 +125,7 @@
           }
         }
       },
-      "id": "0ece5bde-ecaf-4144-b01a-b852d0951e10",
+      "id": "708a2722-73e4-4206-a301-7a6882ac8df1",
       "name": "Claude summarise",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -146,7 +146,7 @@
         "jsCode": "const parseAi = (item) => {\n  try {\n    const j = item.json || {};\n    if (j.error || !j.content) return null;\n    let text = (j.content || []).map(c => c.text || '').join('').trim();\n    text = text.replace(/^```(?:json)?/i, '').replace(/```$/, '').trim();\n    const start = text.indexOf('{'); const end = text.lastIndexOf('}');\n    if (start < 0 || end < 0) return null;\n    return JSON.parse(text.slice(start, end + 1));\n  } catch { return null; }\n};\n\nconst rows = $('Rows').first().json.rows;\nconst prep = $('Prep AI').all();\nconst byKey = {};\n$input.all().forEach((item, i) => { const k = prep[i]?.json?.key; const p = k ? parseAi(item) : null; if (k && p) byKey[k] = p; });\nlet summarised = 0;\nfor (const r of rows) {\n  const p = byKey[r.batch_key] || byKey[r['link']];\n  if (p) { r.ai_summary = String(p.summary || '').slice(0, 600); r.ai_reason = String(p.why || p.action || '').slice(0, 400); if (typeof p.relevant === 'boolean') r.ai_verdict = p.relevant; summarised++; }\n}\n\nreturn [{ json: { rows, summarised } }];",
         "mode": "runOnceForAllItems"
       },
-      "id": "c88ef3ee-0e2c-4dd7-bd72-718eacaa5108",
+      "id": "ef0ff8cf-07b6-4511-8504-4d1784686a5d",
       "name": "Merge AI",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -160,7 +160,7 @@
         "jsCode": "const rows = $input.first().json.rows.filter(r => r.ai_summary);\nreturn rows.map(r => ({ json: { link: r.link, body: { ai_summary: r.ai_summary, ai_reason: r.ai_reason, ai_verdict: r.ai_verdict ?? null } } }));",
         "mode": "runOnceForAllItems"
       },
-      "id": "829e7836-489c-4879-9c76-040369ff4338",
+      "id": "44690f47-6747-4685-95d5-965111dbfbce",
       "name": "Patch items",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -201,7 +201,7 @@
           "timeout": 60000
         }
       },
-      "id": "dc31046f-ef80-47f8-b7dd-1a4b1d1645f1",
+      "id": "0ae6d6cb-b3b3-4337-81de-034323201167",
       "name": "Save summary",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -243,7 +243,7 @@
           "timeout": 60000
         }
       },
-      "id": "898659b4-d277-4235-b2c8-1ff93661d795",
+      "id": "9ba7c785-ee10-48a8-9fb6-47c7c8590df7",
       "name": "Log run",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
