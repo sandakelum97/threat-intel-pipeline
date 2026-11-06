@@ -12,7 +12,7 @@
           ]
         }
       },
-      "id": "2de538ba-3086-4c6e-9840-e429bcbad491",
+      "id": "5c7d9c8e-6c94-424b-993e-e03c7ada47e6",
       "name": "Schedule",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
@@ -26,7 +26,7 @@
         "jsCode": "// ====== DEMO CONFIG \u2013 move secrets to n8n Credentials before production ======\nconst PRODUCT_GROUPS = {\n  // group name           : terms matched (case-insensitive) in KEV vendor/product, NVD CPE/description, article text\n  \"Microsoft\":            [\"Microsoft\",\"Windows\",\"Exchange\",\"SharePoint\",\"Office\",\"Entra\",\"Azure\",\"Intune\",\"Hyper-V\",\"SQL Server\",\"Teams\",\"OneDrive\",\"Outlook\",\"Defender\"],\n  \"Fortinet\":             [\"Fortinet\",\"FortiGate\",\"FortiOS\",\"FortiManager\",\"FortiAnalyzer\",\"FortiClient\"],\n  \"ConnectWise\":          [\"ConnectWise\",\"ScreenConnect\"],\n  \"NinjaOne\":             [\"NinjaOne\",\"Ninja RMM\"],\n  \"Cisco\":                [\"Cisco\"],\n  \"Ivanti\":               [\"Ivanti\"],\n  \"Citrix\":               [\"Citrix\",\"NetScaler\"],\n  \"VMware\":               [\"VMware\",\"Broadcom\"],\n  \"Veeam\":                [\"Veeam\"],\n  \"SonicWall\":            [\"SonicWall\"],\n  \"Palo Alto\":            [\"Palo Alto\",\"PAN-OS\",\"GlobalProtect\"],\n  \"Apple\":                [\"Apple\",\"iOS\",\"macOS\"],\n  \"Google / Chrome\":      [\"Google\",\"Chrome\",\"Chromium\"],\n  \"Mozilla\":              [\"Mozilla\",\"Firefox\"],\n  \"Adobe\":                [\"Adobe\",\"Acrobat\"],\n  \"Atlassian\":            [\"Atlassian\",\"Confluence\",\"Jira\"],\n  \"Oracle\":               [\"Oracle\"],\n  \"SolarWinds\":           [\"SolarWinds\"],\n  \"ManageEngine\":         [\"Zoho\",\"ManageEngine\"],\n  \"NAS\":                  [\"Synology\",\"QNAP\"],\n  \"Ubiquiti\":             [\"Ubiquiti\",\"UniFi\"],\n  \"Hardware OEM\":         [\"Dell\",\"Lenovo\"],\n  \"Progress / MOVEit\":    [\"Progress\",\"MOVEit\"],\n  \"DevOps\":               [\"GitLab\",\"Jenkins\"],\n  \"Linux / OSS\":          [\"OpenSSL\",\"Linux\",\"Ubuntu\",\"Samba\"],\n  \"PaperCut\":             [\"PaperCut\"],\n  \"Kaseya\":               [\"Kaseya\"],\n  \"Security tools\":       [\"CrowdStrike\",\"Proofpoint\",\"ThreatLocker\",\"Auvik\"],\n  \"Archivers\":            [\"7-Zip\",\"WinRAR\"],\n  \"Proxmox\":              [\"Proxmox\"],\n};\nreturn [{\n  json: {\n    SUPABASE_URL: \"https://YOUR-PROJECT.supabase.co\",\n    SUPABASE_SERVICE_KEY: \"YOUR-SERVICE-ROLE-KEY\",      // server-side only, never in the dashboard\n    TEAMS_WEBHOOK: \"https://YOUR-TENANT.webhook.office.com/webhookb2/....\",\n    DASHBOARD_URL: \"https://your-dashboard-url/\",      // linked at the bottom of every email/card\n    EMAIL_TO: \"tharakajce.97@gmail.com\",                       // comma-separated list for the team digest\n    EMAIL_FROM: \"Threat Intel <tharakajce.97@gmail.com>\",        // must match the SMTP credential account\n\n    PRODUCT_GROUPS,\n    VENDOR_ALLOWLIST: Object.values(PRODUCT_GROUPS).flat(),\n\n    // High-signal phrases for news scoring (weight added to score)\n    SIGNAL_TERMS: {\n      \"zero-day\": 3, \"0-day\": 3, \"actively exploited\": 3, \"in the wild\": 3,\n      \"exploited\": 2, \"ransomware\": 2, \"critical\": 1, \"rce\": 2, \"remote code execution\": 2,\n      \"authentication bypass\": 2, \"patch now\": 2, \"emergency\": 2, \"out-of-band\": 2,\n      \"cve-\": 1, \"australia\": 2, \"australian\": 2, \"msp\": 2, \"mssp\": 2, \"rmm\": 2,\n      \"supply chain\": 1, \"phishing\": 1, \"data breach\": 1\n    },\n    MIN_SCORE: 3,                 // article is \"relevant\" at or above this\n    NEWS_MAX_AGE_DAYS: 7,         // ignore feed items older than this (MSRC feed returns its whole history)\n    KEV_LOOKBACK_DAYS: 14,        // on first run, only notify about KEV entries this recent\n\n    // CVE Watch / enrichment (TI 04, TI 05)\n    NVD_API_KEY: \"YOUR-NVD-API-KEY\",   // https://nvd.nist.gov/developers/request-an-api-key\n    CVSS_MIN: 7.0,                     // CVE Watch keeps CVEs at or above this base score\n    CVE_LOOKBACK_HOURS: 48,            // NVD publication window per run\n    ENRICH_BATCH: 60,                  // KEV rows enriched per TI 05 run\n\n    // AI summaries (Claude). Credential \"Anthropic account\" is selected on the Claude nodes.\n    AI_ENABLED: true,\n    AI_MODEL: \"claude-haiku-5-5\",\n    AI_MAX_PER_RUN: 25,\n    AI_CONTEXT: \"We are an Australian MSSP running Microsoft 365/Defender XDR/Sentinel/Entra, Fortinet (FortiGate/FortiManager/FortiAnalyzer), ConnectWise and NinjaOne RMM, CrowdStrike Falcon, Proofpoint, ThreatLocker, Nessus and Auvik across ~50 SMB client tenants.\"\n  }\n}];",
         "mode": "runOnceForAllItems"
       },
-      "id": "55242bc7-61ac-4468-b36a-1930cabbc4bb",
+      "id": "7c7bf948-20a9-49e8-b834-209e98e18f77",
       "name": "Config",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -38,7 +38,7 @@
     {
       "parameters": {
         "method": "GET",
-        "url": "={{ $('Config').first().json.SUPABASE_URL }}/rest/v1/kev_entries?select=cve_id,vendor,product,vuln_name,description,ransomware,matched_vendor,product_group&enriched_at=is.null&order=date_added.desc&limit={{ $('Config').first().json.ENRICH_BATCH }}",
+        "url": "={{ $('Config').first().json.SUPABASE_URL }}/rest/v1/kev_entries?select=cve_id,vendor,product,vuln_name,description,ransomware,matched_vendor,product_group&ai_summary=is.null&order=enriched_at.asc.nullsfirst,date_added.desc&limit={{ $('Config').first().json.ENRICH_BATCH }}",
         "options": {
           "timeout": 60000
         },
@@ -56,7 +56,7 @@
           ]
         }
       },
-      "id": "101e9564-1012-4427-9d5c-5653eac21ec7",
+      "id": "274fd78e-1b9c-4383-9cae-09dcc85fc4f1",
       "name": "Get unenriched KEV",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -88,7 +88,7 @@
           ]
         }
       },
-      "id": "e7506cd2-e958-4f67-9cc9-3569f3e001d7",
+      "id": "597e0c34-5367-4e58-bdc6-3ff44bdd1ee3",
       "name": "NVD lookup",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -103,7 +103,7 @@
         "jsCode": "const pickCvss = (metrics) => {\n  const order = [['cvssMetricV40','4.0'],['cvssMetricV31','3.1'],['cvssMetricV30','3.0'],['cvssMetricV2','2.0']];\n  for (const [key, ver] of order) {\n    const arr = metrics?.[key];\n    if (Array.isArray(arr) && arr.length) {\n      const m = arr.find(x => x.type === 'Primary') || arr[0];\n      const d = m.cvssData || {};\n      const score = d.baseScore;\n      let sev = d.baseSeverity || m.baseSeverity;\n      if (!sev && typeof score === 'number') sev = score >= 9 ? 'CRITICAL' : score >= 7 ? 'HIGH' : score >= 4 ? 'MEDIUM' : 'LOW';\n      return { score, severity: sev ? String(sev).toUpperCase() : null, vector: d.vectorString || null, version: ver };\n    }\n  }\n  return { score: null, severity: null, vector: null, version: null };\n};\nconst cpeParts = (configurations) => {\n  const vendors = new Set(), products = new Set();\n  for (const c of configurations || []) for (const n of c.nodes || []) for (const m of n.cpeMatch || []) {\n    const p = String(m.criteria || '').split(':');\n    if (p.length > 4) { vendors.add(p[3]); products.add(p[4]); }\n  }\n  return { vendors: [...vendors], products: [...products] };\n};\n\nconst cfg = $('Config').first().json;\nconst groupOf = (term) => {\n  const t = String(term || '').toLowerCase();\n  for (const [g, terms] of Object.entries(cfg.PRODUCT_GROUPS)) if (terms.some(x => x.toLowerCase() === t)) return g;\n  return 'Other';\n};\n\nconst wanted = $('Get unenriched KEV').all().map(i => i.json);\nconst byId = {};\nfor (const item of $input.all()) {\n  const j = item.json || {};\n  const v = (j.vulnerabilities || [])[0]?.cve;\n  if (v?.id) byId[v.id] = { cv: pickCvss(v.metrics), desc: (v.descriptions || []).find(d => d.lang === 'en')?.value || '' };\n}\nconst rows = wanted.map(w => {\n  const n = byId[w.cve_id] || { cv: { score: null, severity: null, vector: null, version: null }, desc: '' };\n  return { cve_id: w.cve_id, vendor: w.vendor, product: w.product, vuln_name: w.vuln_name, ransomware: w.ransomware,\n    description: n.desc || w.description || '', matched_vendor: w.matched_vendor, product_group: w.product_group || groupOf(w.matched_vendor),\n    cvss_score: n.cv.score, cvss_severity: n.cv.severity, cvss_vector: n.cv.vector, cvss_version: n.cv.version };\n});\nreturn [{ json: { rows, ids: rows.map(r => r.cve_id), nvd_found: Object.keys(byId).length } }];",
         "mode": "runOnceForAllItems"
       },
-      "id": "3b8d4b4d-b9cb-498d-8a26-03626978fa40",
+      "id": "0bb2f50a-0415-41ff-b578-b89d74a0396d",
       "name": "Parse NVD",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -117,7 +117,7 @@
         "jsCode": "const ids = $input.first().json.ids || [];\nconst chunk = (arr, n) => { const out = []; for (let i = 0; i < arr.length; i += n) out.push(arr.slice(i, i + n)); return out; };\nreturn chunk(ids, 100).map(c => ({ json: { cves: c.join(',') } }));",
         "mode": "runOnceForAllItems"
       },
-      "id": "3f5aac64-2783-4ceb-98ae-f8d0c22e80dd",
+      "id": "6d73e676-5696-4fc5-9c9b-02832bef2a27",
       "name": "EPSS batches",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -134,7 +134,7 @@
           "timeout": 60000
         }
       },
-      "id": "cb9ad798-bef2-4c9b-ad95-01e6c181a7e8",
+      "id": "b4fde218-b132-4226-9be7-440876fb78d9",
       "name": "Fetch EPSS",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -149,7 +149,7 @@
         "jsCode": "const rows = $('Parse NVD').first().json.rows;\nconst epss = {};\nfor (const item of $input.all()) for (const d of (item.json?.data || [])) epss[d.cve] = { epss: Number(d.epss), percentile: Number(d.percentile) };\nfor (const r of rows) { const e = epss[r.cve_id]; r.epss_score = e ? e.epss : null; r.epss_percentile = e ? e.percentile : null; }\nreturn [{ json: { rows, ids: rows.map(r => r.cve_id), epss_found: Object.keys(epss).length } }];",
         "mode": "runOnceForAllItems"
       },
-      "id": "26ba3e4d-8461-4811-8f4d-9affbb28c63f",
+      "id": "1679a72f-0faa-44c4-b643-0028979806ee",
       "name": "Merge EPSS",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -160,10 +160,10 @@
     },
     {
       "parameters": {
-        "jsCode": "const cfg = $('Config').first().json;\nconst rows = $input.first().json.rows;\nif (!cfg.AI_ENABLED || rows.length === 0) return [{ json: { skip: true, prompt: 'Reply with {}' } }];\n// one prompt per browser-release batch instead of per CVE\nconst seenBatch = new Set();\nconst picked = [];\nfor (const r of rows) {\n  if (r.batch_key) { if (seenBatch.has(r.batch_key)) continue; seenBatch.add(r.batch_key); }\n  picked.push(r);\n  if (picked.length >= cfg.AI_MAX_PER_RUN) break;\n}\nreturn picked.map(r => ({ json: { key: r.batch_key || r['cve_id'], prompt:\n  `${cfg.AI_CONTEXT}\\nYou write short threat-intel notes for our SOC analysts. Reply with JSON only, no markdown, exactly this shape: {\"summary\":\"2 plain-English sentences: what the flaw is and what an attacker gains\",\"why\":\"1 sentence: what we should do for clients (patch/mitigate/monitor) and how urgent\"}\\n\\n` + `CVE: ${r.cve_id}\\nVendor/product: ${r.vendor || r.matched_vendor || ''} ${r.product || ''}\\nTitle: ${r.vuln_name || ''}\\nCVSS: ${r.cvss_score ?? 'n/a'} ${r.cvss_severity || ''}  EPSS: ${r.epss_score ?? 'n/a'}  Ransomware use: ${r.ransomware || 'n/a'}\\nDescription: ${(r.description || '').slice(0, 900)}` } }));",
+        "jsCode": "const cfg = $('Config').first().json;\nconst rows = $input.first().json.rows;\nif (!cfg.AI_ENABLED || rows.length === 0) return [{ json: { skip: true, prompt: 'Reply with {}' } }];\n// one prompt per browser-release batch instead of per CVE\nconst seenBatch = new Set();\nconst picked = [];\nfor (const r of rows) {\n  if (r.batch_key) { if (seenBatch.has(r.batch_key)) continue; seenBatch.add(r.batch_key); }\n  picked.push(r);\n  if (picked.length >= cfg.ENRICH_BATCH) break;\n}\nreturn picked.map(r => ({ json: { key: r.batch_key || r['cve_id'], prompt:\n  `${cfg.AI_CONTEXT}\\nYou write short threat-intel notes for our SOC analysts. Keep summary under 60 words and why under 45 words. Reply with JSON only, no markdown, exactly this shape: {\"summary\":\"2 plain-English sentences: what the flaw is and what an attacker gains\",\"why\":\"1 sentence: what we should do for clients (patch/mitigate/monitor) and how urgent\"}\\n\\n` + `CVE: ${r.cve_id}\\nVendor/product: ${r.vendor || r.matched_vendor || ''} ${r.product || ''}\\nTitle: ${r.vuln_name || ''}\\nCVSS: ${r.cvss_score ?? 'n/a'} ${r.cvss_severity || ''}  EPSS: ${r.epss_score ?? 'n/a'}  Ransomware use: ${r.ransomware || 'n/a'}\\nDescription: ${(r.description || '').slice(0, 900)}` } }));",
         "mode": "runOnceForAllItems"
       },
-      "id": "67a04554-baef-4850-aa69-5376c26bfaa3",
+      "id": "31f64f4b-c62c-430d-b9dc-2a51e70576f1",
       "name": "Prep AI",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -193,7 +193,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ model: $('Config').first().json.AI_MODEL, max_tokens: 400, messages: [{ role: 'user', content: $json.prompt }] }) }}",
+        "jsonBody": "={{ JSON.stringify({ model: $('Config').first().json.AI_MODEL, max_tokens: 900, messages: [{ role: 'user', content: $json.prompt }] }) }}",
         "options": {
           "timeout": 60000,
           "batching": {
@@ -204,7 +204,7 @@
           }
         }
       },
-      "id": "bd2f13e8-7605-45da-893f-1df482d37629",
+      "id": "ca3483b7-2ea8-41c3-984f-6871266710d2",
       "name": "Claude summarise",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -225,7 +225,7 @@
         "jsCode": "const parseAi = (item) => {\n  try {\n    const j = item.json || {};\n    if (j.error || !j.content) return null;\n    let text = (j.content || []).map(c => c.text || '').join('').trim();\n    text = text.replace(/^```(?:json)?/i, '').replace(/```$/, '').trim();\n    const start = text.indexOf('{'); const end = text.lastIndexOf('}');\n    if (start < 0 || end < 0) return null;\n    return JSON.parse(text.slice(start, end + 1));\n  } catch { return null; }\n};\n\nconst rows = $('Merge EPSS').first().json.rows;\nconst prep = $('Prep AI').all();\nconst byKey = {};\n$input.all().forEach((item, i) => { const k = prep[i]?.json?.key; const p = k ? parseAi(item) : null; if (k && p) byKey[k] = p; });\nlet summarised = 0;\nfor (const r of rows) {\n  const p = byKey[r.batch_key] || byKey[r['cve_id']];\n  if (p) { r.ai_summary = String(p.summary || '').slice(0, 600); r.ai_reason = String(p.why || p.action || '').slice(0, 400); if (typeof p.relevant === 'boolean') r.ai_verdict = p.relevant; summarised++; }\n}\n\nreturn [{ json: { rows, summarised } }];",
         "mode": "runOnceForAllItems"
       },
-      "id": "51129c38-09e1-4c0b-8e78-447e3475beb5",
+      "id": "a61a3591-72db-4653-a91f-bdf3a3dc60fa",
       "name": "Merge AI",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -239,7 +239,7 @@
         "jsCode": "const rows = $input.first().json.rows;\nconst now = new Date().toISOString();\nconst out = rows.map(r => ({ cve_id: r.cve_id, cvss_score: r.cvss_score, cvss_severity: r.cvss_severity, cvss_vector: r.cvss_vector, cvss_version: r.cvss_version,\n  epss_score: r.epss_score, epss_percentile: r.epss_percentile, product_group: r.product_group, ai_summary: r.ai_summary || null, ai_reason: r.ai_reason || null, enriched_at: now }));\nreturn [{ json: { rows: out, count: out.length } }];",
         "mode": "runOnceForAllItems"
       },
-      "id": "e176bb95-f2d8-474b-9fe5-c6b7dded9f5e",
+      "id": "34a53af8-20db-487b-9624-e723df3d48bc",
       "name": "Stamp enriched_at",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -280,7 +280,7 @@
           "timeout": 60000
         }
       },
-      "id": "27ca7bbf-44be-4229-b028-b9395dd80411",
+      "id": "da47b637-a84d-484d-8d1a-7eae44ec3efa",
       "name": "Update kev_entries",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -321,7 +321,7 @@
           "timeout": 60000
         }
       },
-      "id": "0467f3d3-1ca4-40f7-b95c-5a17351495e8",
+      "id": "79a6afb0-7ba5-4088-9d97-de3a35279767",
       "name": "Log run",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
