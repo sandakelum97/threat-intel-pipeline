@@ -77,6 +77,9 @@ header { display: flex; flex-wrap: wrap; gap: 10px 20px; align-items: center; ju
 .pt .st.late { background: var(--med); } .pt .st.err { background: var(--crit); }
 .pt .ago { font-family: var(--mono); font-size: 12px; }
 .pt .sch { font-size: 11px; color: var(--muted); }
+.pt .run { margin-top: 4px; align-self: start; font-size: 11.5px; padding: 3px 8px; border-radius: 6px; border: 1px solid var(--line); background: var(--panel2); color: var(--fg); display: inline-flex; align-items: center; gap: 4px; transition: border-color var(--t), background var(--t); }
+.pt .run:hover:not([disabled]) { border-color: var(--accent); color: var(--accent); }
+.pt .run[disabled] { opacity: .55; cursor: default; }
 .pt .pop { position: absolute; z-index: 20; top: calc(100% + 6px); left: 0; min-width: 250px; background: var(--panel); border: 1px solid var(--line2); border-radius: var(--r); padding: 10px 12px; box-shadow: var(--shadow); display: none; font-size: 12.5px; }
 .pt:hover .pop, .pt:focus-within .pop { display: grid; gap: 4px; }
 .pt .pop b { font-weight: 500; }
@@ -209,6 +212,7 @@ footer { color: var(--muted); font-size: 12px; margin-top: 24px; }
   <symbol id="i-list" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/></symbol>
   <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></symbol>
   <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="M7 5l12 7-12 7z"/></symbol>
   <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 10v6M12 7h.01"/></symbol>
 </svg>
 <div class="wrap">
@@ -223,7 +227,7 @@ footer { color: var(--muted); font-size: 12px; margin-top: 24px; }
 
 <div class="notice" id="demoNotice" hidden>Showing <strong>sample data</strong>. Set <code>SUPABASE_URL</code> and <code>SUPABASE_ANON_KEY</code> at the top of the script to read live data.</div>
 
-<div class="pipe-head"><span class="label">Pipeline status · scheduled n8n workflows (read-only, hover for details)</span><span class="count" id="runsNote"></span></div>
+<div class="pipe-head"><span class="label">Pipeline status · scheduled n8n workflows (hover for details)</span><span class="count" id="runsNote"></span></div>
 <div class="pipe" id="pipe"></div>
 
 <div class="tabs" role="tablist">
@@ -299,6 +303,8 @@ footer { color: var(--muted); font-size: 12px; margin-top: 24px; }
 // ===================== CONFIG =====================
 const SUPABASE_URL = "https://wpxxcuncbduchwicsysn.supabase.co";          // e.g. https://abcd1234.supabase.co
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndweHhjdW5jYmR1Y2h3aWNzeXNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM4ODM4NTEsImV4cCI6MjEwOTQ1OTg1MX0.GzsojSZPDJJtS_0h8n8xIUyXzEhPs341YK682fxbrbc";     // anon / publishable key only – never the service role key
+const N8N_RUN_BASE = "";          // e.g. http://localhost:5678 (or the tunnel URL) – leave empty to hide the Run buttons
+const RUN_TOKEN = "";             // value of the n8n "TI run token" header credential (x-run-token)
 // ==================================================
 
 const SIGNALS = new Set(["zero-day","0-day","actively exploited","in the wild","exploited","ransomware","critical","rce","remote code execution","authentication bypass","patch now","emergency","out-of-band","cve-","australia","australian","msp","mssp","rmm","supply chain","phishing","data breach","chromium-edge-batch"]);
@@ -310,7 +316,9 @@ const WORKFLOWS = [
   { kind: "kev-enrich", name: "KEV Enrich", wf: "TI 05", schedule: "every 2 h", maxH: 5, what: "KEV rows enriched (CVSS, EPSS, summary)" },
   { kind: "ai-summaries", name: "AI Summaries", wf: "TI 06", schedule: "hourly", maxH: 3, what: "articles summarised by Claude" },
   { kind: "ticket-note", name: "Ticket note", wf: "TI 07", schedule: "weekdays 07:00", maxH: 80, what: "items in the daily note" },
+  { kind: "verify", name: "Verify data", wf: "TI 00", schedule: "manual", maxH: Infinity, what: "checks against CISA / NVD / EPSS (emailed)" },
 ];
+const RUN_COOLDOWN_MIN = 10;
 const DAY = 86400000;
 const now = () => Date.now();
 const iso = (d) => new Date(d).toISOString();
@@ -411,6 +419,7 @@ function renderPipeline() {
       <span class="nm"><span class="st ${st}"></span>${esc(w.name)}</span>
       <span class="ago">${esc(ago(last?.sent_at))}</span>
       <span class="sch">${esc(w.wf)} · ${esc(w.schedule)}</span>
+      ${canRun() ? `<button type="button" class="run" data-kind="${esc(w.kind)}" ${onCooldown(w.kind) ? "disabled" : ""}><svg class="i" style="width:12px;height:12px"><use href="#i-play"/></svg>${onCooldown(w.kind) ? "queued" : "Run now"}</button>` : ""}
       <div class="pop" role="tooltip">
         <div class="row"><b>${esc(w.wf)} – ${esc(w.name)}</b><span class="muted">${esc(stText)}</span></div>
         <div class="row"><span class="muted">Schedule</span><span>${esc(w.schedule)}</span></div>
@@ -421,6 +430,20 @@ function renderPipeline() {
   }).join("");
   $("#pipe").innerHTML = html;
   $("#runsNote").textContent = data.runs.length ? `${data.runs.length} runs logged` : "";
+  $$("#pipe .run").forEach(b => b.addEventListener("click", () => runNow(b.dataset.kind, b)));
+}
+function canRun() { return !!(N8N_RUN_BASE && RUN_TOKEN); }
+function onCooldown(kind) { try { const t = Number(localStorage.getItem("tiw.run." + kind) || 0); return now() - t < RUN_COOLDOWN_MIN * 60000; } catch { return false; } }
+async function runNow(kind, btn) {
+  if (!canRun() || onCooldown(kind)) return;
+  btn.disabled = true; btn.lastChild.textContent = "starting…";
+  try {
+    const r = await fetch(`${N8N_RUN_BASE.replace(/\/+$/, "")}/webhook/ti-run/${encodeURIComponent(kind)}`, { method: "POST", headers: { "x-run-token": RUN_TOKEN } });
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    try { localStorage.setItem("tiw.run." + kind, String(now())); } catch {}
+    btn.lastChild.textContent = "queued";
+    setTimeout(load, 45000);
+  } catch (e) { btn.disabled = false; btn.lastChild.textContent = "failed (" + e.message + ")"; setTimeout(() => btn.lastChild.textContent = "Run now", 4000); }
 }
 
 // ----- filtering

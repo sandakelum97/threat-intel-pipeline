@@ -242,6 +242,7 @@ A single HTML file (`dashboard/index.html`), hosted on Vercel, reading Supabase 
 
 ![Pipeline hover](screenshots/dashboard-pipeline-hover.png)
 
+- **Run now** on each tile: fires the workflow's n8n Webhook trigger (`POST /webhook/ti-run/<kind>` with the `x-run-token` header checked by n8n's Header Auth credential). Buttons only appear when `N8N_RUN_BASE` and `RUN_TOKEN` are set in the page config, and each workflow has a 10-minute cooldown. Today this works from the laptop that runs n8n (`http://localhost:5678`); for the whole team, n8n goes behind a Cloudflare Tunnel + Cloudflare Access login and the base URL changes to the tunnel address — that is also where "admin only" access is enforced.
 - **Filter bar:** search; time window as a segmented control (24 h / 7 d / 30 d / 90 d / All) or an explicit **from → to date range**; category dropdowns (Severity, Product, Source, Flags) that show counts and keep the bar compact; active filters appear as removable chips; *Clear filters* resets everything.
 - **KPI tiles:** KEV in scope, ransomware-known, federal due within 7 days, new high-severity CVEs in 24 h, criticals, relevant articles, % noise removed.
 - **Charts:** KEV additions per day, severity mix, articles by source, exposure by product.

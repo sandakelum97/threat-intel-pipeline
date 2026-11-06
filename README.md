@@ -107,6 +107,16 @@ Vercel or Netlify, or keep it local and share the window. Set n8n's timezone to 
   *Claude relevancy check* node, enable the node. Then add a small Code node after it to write
   `ai_verdict` / `ai_reason` back to `articles` (left out so the demo stays keyword-only).
 
+## Run now buttons (dashboard → n8n)
+
+Each pipeline tile on the dashboard has a **Run now** button that calls an n8n Webhook trigger
+(`POST /webhook/ti-run/<kind>`, header `x-run-token`). Set `N8N_RUN_BASE` and `RUN_TOKEN` at the top of
+`dashboard/index.html`; the token is the value of the n8n Header Auth credential **TI run token**. Leave both
+empty to hide the buttons. A 10-minute cooldown per workflow stops accidental double runs. With
+`N8N_RUN_BASE = http://localhost:5678` the buttons work when the dashboard is viewed on the laptop that runs n8n;
+to let the team use them, expose n8n through a Cloudflare Tunnel and put Cloudflare Access (login) in front of it,
+then set `N8N_RUN_BASE` to the tunnel URL. Wrong or missing token → n8n answers 403 and nothing runs.
+
 ## Security notes
 
 - Emails, the ticket note and the dashboard treat every value from feeds, NVD and CISA as untrusted:
