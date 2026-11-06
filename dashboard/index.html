@@ -5,94 +5,114 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Threat Intel Watch</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fira+Sans:wght@400;500;600&family=Fira+Code:wght@400;500&display=swap">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js" integrity="sha384-dug+JxfBvklEQdJ4AYuBBAIScUz0bVN73xpy273gcAwHjb3qI0fXmuYNaNfdyYJG" crossorigin="anonymous"></script>
 <style>
-/* Layout: SOC-style dark console — header with run status, tab bar, KPI strip, chart row, filter chips, dense table. Light theme kept. */
+/* Minimal / Swiss, dense dashboard. Dark default, light supported. Tokens on :root. */
 :root {
-  --bg: #0d1117; --panel: #141b22; --panel2: #1a222b; --fg: #e6edf3; --muted: #8b98a5; --line: #263039;
-  --accent: #3dd6a3; --accent-ink: #06130e; --accent-soft: rgba(61,214,163,.14);
-  --crit: #ff6b6b; --high: #ff9f43; --med: #f6c445; --low: #4cd38a; --info: #5ab0ff;
-  --chip: #1f2932; --chip-on: #3dd6a3; --chip-on-ink: #06130e;
-  --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
-  --sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --shadow: 0 1px 0 rgba(255,255,255,.03) inset, 0 8px 24px rgba(0,0,0,.25);
+  --bg: #0b0f14; --panel: #121820; --panel2: #171f28; --fg: #e8edf2; --muted: #8a97a6; --line: #232d38; --line2: #2d3947;
+  --accent: #3ddc97; --accent-ink: #04140c; --accent-soft: rgba(61,220,151,.12);
+  --crit: #ff6565; --high: #ff9a3c; --med: #f3c74b; --low: #52d28d; --info: #5eb3ff;
+  --chip: #1b242e; --chip-on: #3ddc97; --chip-on-ink: #04140c;
+  --mono: "Fira Code", ui-monospace, Menlo, Consolas, monospace;
+  --sans: "Fira Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --shadow: 0 1px 0 rgba(255,255,255,.03) inset, 0 10px 30px rgba(0,0,0,.28);
+  --r: 10px; --t: 200ms cubic-bezier(.2,.7,.2,1);
   color-scheme: dark;
 }
 @media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) {
-  --bg: #f3f5f2; --panel: #ffffff; --panel2: #f7f9f6; --fg: #17201b; --muted: #5d6a63; --line: #d8ded9;
-  --accent: #0f7a5c; --accent-ink: #ffffff; --accent-soft: rgba(15,122,92,.10);
+  --bg: #f4f6f8; --panel: #ffffff; --panel2: #f7f9fb; --fg: #161c22; --muted: #5b6774; --line: #dde3ea; --line2: #cfd7e0;
+  --accent: #0f7f5a; --accent-ink: #ffffff; --accent-soft: rgba(15,127,90,.10);
   --crit: #c62828; --high: #d9531e; --med: #a36d00; --low: #2e7d4f; --info: #1f6fd0;
-  --chip: #e9ede8; --chip-on: #0f7a5c; --chip-on-ink: #ffffff; --shadow: 0 1px 2px rgba(0,0,0,.06);
+  --chip: #eaeef2; --chip-on: #0f7f5a; --chip-on-ink: #ffffff; --shadow: 0 1px 2px rgba(16,24,40,.06), 0 6px 18px rgba(16,24,40,.05);
   color-scheme: light; } }
 :root[data-theme="light"] {
-  --bg: #f3f5f2; --panel: #ffffff; --panel2: #f7f9f6; --fg: #17201b; --muted: #5d6a63; --line: #d8ded9;
-  --accent: #0f7a5c; --accent-ink: #ffffff; --accent-soft: rgba(15,122,92,.10);
+  --bg: #f4f6f8; --panel: #ffffff; --panel2: #f7f9fb; --fg: #161c22; --muted: #5b6774; --line: #dde3ea; --line2: #cfd7e0;
+  --accent: #0f7f5a; --accent-ink: #ffffff; --accent-soft: rgba(15,127,90,.10);
   --crit: #c62828; --high: #d9531e; --med: #a36d00; --low: #2e7d4f; --info: #1f6fd0;
-  --chip: #e9ede8; --chip-on: #0f7a5c; --chip-on-ink: #ffffff; --shadow: 0 1px 2px rgba(0,0,0,.06);
+  --chip: #eaeef2; --chip-on: #0f7f5a; --chip-on-ink: #ffffff; --shadow: 0 1px 2px rgba(16,24,40,.06), 0 6px 18px rgba(16,24,40,.05);
   color-scheme: light; }
 
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 html, body { margin: 0; }
 body { background: var(--bg); color: var(--fg); font: 14px/1.5 var(--sans);
   padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 0 48px; }
 a { color: inherit; }
 h1, h2, h3 { margin: 0; text-wrap: balance; }
-h1 { font-size: 18px; font-weight: 600; letter-spacing: .01em; }
-h2 { font-size: 14px; font-weight: 600; }
-.wrap { max-width: 1280px; margin: 0 auto; }
+h1 { font-size: 17px; font-weight: 600; letter-spacing: .01em; }
+h2 { font-size: 13.5px; font-weight: 600; }
+.wrap { max-width: 1320px; margin: 0 auto; }
 .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
 .muted { color: var(--muted); }
 .label { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 500; }
+button { font: inherit; cursor: pointer; color: inherit; }
+svg.i { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-header { display: flex; flex-wrap: wrap; gap: 10px 20px; align-items: center; justify-content: space-between; padding-block: 16px 10px; }
+/* header */
+header { display: flex; flex-wrap: wrap; gap: 10px 20px; align-items: center; justify-content: space-between; padding-block: 14px 10px; }
 .brand { display: flex; align-items: center; gap: 10px; }
-.dot { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); }
-.dot.off { background: var(--med); box-shadow: 0 0 0 4px rgba(246,196,69,.15); }
-.runs { display: flex; flex-wrap: wrap; gap: 6px 14px; font-family: var(--mono); font-size: 11.5px; color: var(--muted); }
-.runs b { color: var(--fg); font-weight: 500; }
+.logo { width: 30px; height: 30px; border-radius: 8px; background: var(--accent-soft); color: var(--accent); display: grid; place-items: center; border: 1px solid var(--line); }
+.brand .sub { font-size: 12px; color: var(--muted); }
 .hdr-actions { display: flex; gap: 8px; align-items: center; }
-button { font: inherit; cursor: pointer; }
-.btn { background: transparent; color: var(--fg); border: 1px solid var(--line); padding: 6px 10px; border-radius: 6px; }
-.btn:hover { border-color: var(--accent); }
-.btn:focus-visible, .chip:focus-visible, input:focus-visible, select:focus-visible, .tab:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
-
-.notice { border: 1px solid var(--med); color: var(--med); background: var(--panel); padding: 8px 12px; margin-block: 6px 12px; font-size: 13px; border-radius: 6px; }
+.mode { display: inline-flex; align-items: center; gap: 6px; font-family: var(--mono); font-size: 11.5px; color: var(--muted); padding: 4px 10px; border: 1px solid var(--line); border-radius: 999px; }
+.mode .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
+.mode .dot.off { background: var(--med); }
+.btn { background: var(--panel); color: var(--fg); border: 1px solid var(--line); padding: 6px 10px; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px; transition: border-color var(--t), background var(--t); }
+.btn:hover { border-color: var(--line2); background: var(--panel2); }
+.btn.icon { padding: 6px 8px; }
+.btn[disabled] { opacity: .5; cursor: not-allowed; }
+.notice { border: 1px solid var(--med); color: var(--med); background: var(--panel); padding: 8px 12px; margin-block: 6px 12px; font-size: 13px; border-radius: 8px; }
 .notice code { font-family: var(--mono); }
 
-.tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--line); margin-block: 6px 16px; overflow-x: auto; }
-.tab { background: transparent; border: 0; color: var(--muted); padding: 10px 14px; border-bottom: 2px solid transparent; white-space: nowrap; font-weight: 500; }
+/* pipeline status strip */
+.pipe { display: grid; grid-template-columns: repeat(auto-fit, minmax(148px, 1fr)); gap: 8px; margin-block: 6px 14px; }
+.pipe-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 4px; }
+.pt { position: relative; background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 10px 12px; display: grid; gap: 2px; box-shadow: var(--shadow); cursor: default; transition: border-color var(--t), transform var(--t); }
+.pt:hover, .pt:focus-within { border-color: var(--line2); transform: translateY(-1px); z-index: 25; }
+.pt .nm { display: flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 500; }
+.pt .st { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex: none; }
+.pt .st.ok { background: var(--low); box-shadow: 0 0 0 3px rgba(82,210,141,.18); }
+.pt .st.late { background: var(--med); } .pt .st.err { background: var(--crit); }
+.pt .ago { font-family: var(--mono); font-size: 12px; }
+.pt .sch { font-size: 11px; color: var(--muted); }
+.pt .pop { position: absolute; z-index: 20; top: calc(100% + 6px); left: 0; min-width: 250px; background: var(--panel); border: 1px solid var(--line2); border-radius: var(--r); padding: 10px 12px; box-shadow: var(--shadow); display: none; font-size: 12.5px; }
+.pt:hover .pop, .pt:focus-within .pop { display: grid; gap: 4px; }
+.pt .pop b { font-weight: 500; }
+.pt .pop .row { display: flex; justify-content: space-between; gap: 10px; }
+.pt .pop .hist { border-top: 1px solid var(--line); margin-top: 4px; padding-top: 4px; font-family: var(--mono); font-size: 11px; color: var(--muted); display: grid; gap: 2px; }
+
+/* tabs */
+.tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--line); margin-block: 4px 12px; overflow-x: auto; }
+.tab { background: transparent; border: 0; color: var(--muted); padding: 10px 14px; border-bottom: 2px solid transparent; white-space: nowrap; font-weight: 500; display: inline-flex; align-items: center; gap: 6px; transition: color var(--t), border-color var(--t); }
+.tab:hover { color: var(--fg); }
 .tab[aria-selected="true"] { color: var(--fg); border-bottom-color: var(--accent); }
-.tab .n { font-family: var(--mono); font-size: 11px; background: var(--chip); padding: 1px 6px; border-radius: 10px; margin-left: 6px; color: var(--fg); }
+.tab .n { font-family: var(--mono); font-size: 11px; background: var(--chip); padding: 1px 7px; border-radius: 10px; color: var(--fg); }
 
-.strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 14px; }
-.tile { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; display: grid; gap: 2px; box-shadow: var(--shadow); position: relative; overflow: hidden; }
-.tile::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--tile-bar, var(--accent)); }
-.tile .n { font: 500 26px/1.1 var(--mono); font-variant-numeric: tabular-nums; }
-.tile .sub { color: var(--muted); font-size: 12px; }
-.tile.crit { --tile-bar: var(--crit); } .tile.high { --tile-bar: var(--high); } .tile.med { --tile-bar: var(--med); } .tile.info { --tile-bar: var(--info); }
-
-.charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px; margin-bottom: 14px; }
-.card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; box-shadow: var(--shadow); min-width: 0; }
-.card h2 { margin-bottom: 8px; }
-.card .chartbox { position: relative; height: 190px; }
-.prio { display: grid; gap: 8px; }
-.prio-row { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel2); }
-.prio-row .why { color: var(--muted); font-size: 12px; }
-.stories { display: grid; gap: 8px; }
-.story { padding: 10px 12px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel2); display: grid; gap: 4px; }
-.story .hd { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: baseline; }
-.story .hd a { font-weight: 500; }
-.story .meta { font-family: var(--mono); font-size: 11px; color: var(--muted); }
-.story .sum { font-size: 13px; color: var(--fg); opacity: .9; }
-.story .score { font-family: var(--mono); font-size: 11px; color: var(--accent); border: 1px solid var(--accent); border-radius: 10px; padding: 0 6px; }
-
-.bar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg); padding-block: 8px; margin-bottom: 10px; display: grid; gap: 8px; }
-.row { display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center; }
-.row .label { margin-right: 2px; }
-input[type=search], select { font: inherit; color: var(--fg); background: var(--panel); border: 1px solid var(--line); padding: 7px 10px; border-radius: 6px; min-width: 0; }
-input[type=search] { flex: 1 1 240px; }
-.chip { background: var(--chip); color: var(--fg); border: 1px solid transparent; border-radius: 999px; padding: 4px 10px; font-size: 12.5px; display: inline-flex; gap: 6px; align-items: center; }
+/* filter panel */
+.filters { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); padding-block: 6px 8px; margin-bottom: 12px; }
+.fbar { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 8px 10px; display: grid; gap: 8px; box-shadow: var(--shadow); }
+.frow { display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center; }
+.search { flex: 1 1 220px; display: flex; align-items: center; gap: 6px; background: var(--panel2); border: 1px solid var(--line); border-radius: 8px; padding: 0 10px; color: var(--muted); transition: border-color var(--t); }
+.search:focus-within { border-color: var(--accent); }
+.search input { flex: 1; min-width: 0; background: transparent; border: 0; color: var(--fg); font: inherit; padding: 7px 0; outline: none; }
+.seg { display: inline-flex; background: var(--panel2); border: 1px solid var(--line); border-radius: 8px; padding: 2px; }
+.seg button { background: transparent; border: 0; padding: 4px 9px; border-radius: 6px; font-size: 12.5px; color: var(--muted); transition: background var(--t), color var(--t); }
+.seg button:hover { color: var(--fg); }
+.seg button[aria-pressed="true"] { background: var(--chip-on); color: var(--chip-on-ink); }
+.dates { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--muted); }
+.dates input { font: inherit; font-family: var(--mono); font-size: 12px; color: var(--fg); background: var(--panel2); border: 1px solid var(--line); border-radius: 8px; padding: 5px 8px; min-width: 0; width: 136px; }
+.dd { position: relative; }
+.dd > summary { list-style: none; cursor: pointer; user-select: none; display: inline-flex; align-items: center; gap: 6px; background: var(--panel2); border: 1px solid var(--line); border-radius: 8px; padding: 5px 10px; font-size: 12.5px; transition: border-color var(--t), background var(--t); }
+.dd > summary::-webkit-details-marker { display: none; }
+.dd > summary:hover { border-color: var(--line2); }
+.dd[open] > summary { border-color: var(--accent); }
+.dd > summary .cnt { font-family: var(--mono); font-size: 11px; background: var(--chip-on); color: var(--chip-on-ink); border-radius: 10px; padding: 0 6px; }
+.dd > summary .cnt:empty { display: none; }
+.dd .menu { position: absolute; z-index: 30; top: calc(100% + 6px); left: 0; min-width: 220px; max-width: 320px; max-height: 320px; overflow: auto; background: var(--panel); border: 1px solid var(--line2); border-radius: var(--r); padding: 8px; box-shadow: var(--shadow); display: flex; flex-wrap: wrap; gap: 5px; }
+.chip { background: var(--chip); color: var(--fg); border: 1px solid transparent; border-radius: 999px; padding: 4px 10px; font-size: 12.5px; display: inline-flex; gap: 6px; align-items: center; transition: background var(--t), color var(--t), border-color var(--t); }
+.chip:hover { border-color: var(--line2); }
 .chip .c { font-family: var(--mono); font-size: 11px; color: var(--muted); }
 .chip[aria-pressed="true"] { background: var(--chip-on); color: var(--chip-on-ink); }
 .chip[aria-pressed="true"] .c { color: inherit; opacity: .8; }
@@ -100,8 +120,53 @@ input[type=search] { flex: 1 1 240px; }
 .chip.sev-HIGH[aria-pressed="true"] { background: var(--high); color: #1a0d00; }
 .chip.sev-MEDIUM[aria-pressed="true"] { background: var(--med); color: #1a1300; }
 .chip.sev-LOW[aria-pressed="true"] { background: var(--low); color: #001a0a; }
+.active { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
+.active:empty { display: none; }
+.act-chip { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; background: var(--accent-soft); color: var(--fg); border: 1px solid var(--line); border-radius: 999px; padding: 2px 6px 2px 9px; }
+.act-chip button { background: transparent; border: 0; padding: 0 2px; line-height: 1; color: var(--muted); }
+.act-chip button:hover { color: var(--fg); }
+.link { background: transparent; border: 0; color: var(--accent); font-size: 12px; padding: 2px 4px; }
+.spacer { flex: 1; }
 
-.tablewrap { overflow-x: auto; border: 1px solid var(--line); background: var(--panel); border-radius: 8px; box-shadow: var(--shadow); }
+/* overview */
+.strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin-bottom: 12px; }
+.tile { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 12px 14px; display: grid; gap: 2px; box-shadow: var(--shadow); position: relative; overflow: hidden; transition: border-color var(--t); }
+.tile:hover { border-color: var(--line2); }
+.tile::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--tile-bar, var(--accent)); }
+.tile .n { font: 500 26px/1.1 var(--mono); font-variant-numeric: tabular-nums; }
+.tile .sub { color: var(--muted); font-size: 12px; }
+.tile.crit { --tile-bar: var(--crit); } .tile.high { --tile-bar: var(--high); } .tile.med { --tile-bar: var(--med); } .tile.info { --tile-bar: var(--info); }
+.charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 8px; margin-bottom: 12px; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 12px 14px; box-shadow: var(--shadow); min-width: 0; }
+.card h2 { margin-bottom: 8px; }
+.card .chartbox { position: relative; height: 190px; }
+.prio { display: grid; gap: 6px; }
+.prio-row { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel2); }
+.prio-row .why { color: var(--muted); font-size: 12px; }
+.stories { display: grid; gap: 6px; }
+.story { padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel2); display: grid; gap: 4px; }
+.story .hd { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: baseline; }
+.story .hd a { font-weight: 500; }
+.story .meta { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+.story .sum { font-size: 13px; opacity: .92; }
+.story .score { font-family: var(--mono); font-size: 11px; color: var(--accent); border: 1px solid var(--accent); border-radius: 10px; padding: 0 6px; }
+
+/* data tabs: tiles + table */
+.sect-head { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.sect-head .r { display: flex; align-items: center; gap: 8px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 8px; }
+.g { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; box-shadow: var(--shadow); position: relative; min-width: 0; transition: border-color var(--t), transform var(--t); }
+.g:hover { border-color: var(--line2); transform: translateY(-1px); }
+.g.rw::before { content: ""; position: absolute; left: 0; top: 10px; bottom: 10px; width: 3px; background: var(--crit); border-radius: 0 2px 2px 0; }
+.g .top { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.g .id { font-family: var(--mono); font-weight: 500; font-size: 13px; }
+.g .ttl { font-weight: 500; line-height: 1.35; }
+.g .meta { font-family: var(--mono); font-size: 11px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 4px 10px; }
+.g .sum { font-size: 13px; color: var(--fg); opacity: .92; }
+.g .ai { margin: 0; }
+.g .ft { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; justify-content: space-between; border-top: 1px solid var(--line); padding-top: 6px; margin-top: auto; font-size: 12px; color: var(--muted); }
+.g .grp { font-size: 12px; background: var(--chip); border-radius: 6px; padding: 1px 7px; }
+.tablewrap { overflow-x: auto; border: 1px solid var(--line); background: var(--panel); border-radius: var(--r); box-shadow: var(--shadow); }
 table { border-collapse: collapse; width: 100%; min-width: 820px; }
 th, td { text-align: left; padding: 9px 12px; border-top: 1px solid var(--line); vertical-align: top; }
 th { border-top: 0; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 500; white-space: nowrap; background: var(--panel2); cursor: pointer; user-select: none; }
@@ -111,40 +176,54 @@ td.mono, th.mono { font-family: var(--mono); font-size: 12.5px; white-space: now
 td .t { font-weight: 500; }
 td .s { color: var(--muted); font-size: 12.5px; margin-top: 2px; }
 tr.rw td:first-child { box-shadow: inset 3px 0 0 var(--crit); }
-.sev { display: inline-block; font-family: var(--mono); font-size: 11px; font-weight: 500; padding: 2px 7px; border-radius: 4px; border: 1px solid currentColor; }
+.sev { display: inline-block; font-family: var(--mono); font-size: 11px; font-weight: 500; padding: 2px 7px; border-radius: 5px; border: 1px solid currentColor; }
 .sev.CRITICAL { color: var(--crit); } .sev.HIGH { color: var(--high); } .sev.MEDIUM { color: var(--med); } .sev.LOW { color: var(--low); } .sev.NA { color: var(--muted); }
 .epss { display: inline-grid; grid-template-columns: 44px 56px; gap: 6px; align-items: center; font-family: var(--mono); font-size: 12px; }
 .epss .trk { height: 6px; background: var(--chip); border-radius: 3px; overflow: hidden; }
 .epss .fill { display: block; height: 100%; background: linear-gradient(90deg, var(--low), var(--med), var(--crit)); }
 .pill { display: inline-block; font-family: var(--mono); font-size: 11px; padding: 1px 7px; border-radius: 10px; border: 1px solid currentColor; }
 .pill.new { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
-.pill.kev { color: var(--crit); }
-.pill.crit { color: var(--crit); } .pill.ok { color: var(--low); } .pill.muted { color: var(--muted); }
-.chips { display: flex; flex-wrap: wrap; gap: 4px; }
-.ai { margin-top: 4px; padding: 6px 8px; border-left: 3px solid var(--accent); background: var(--accent-soft); border-radius: 3px; font-size: 13px; }
+.pill.kev { color: var(--crit); } .pill.crit { color: var(--crit); } .pill.ok { color: var(--low); } .pill.muted { color: var(--muted); }
+.chips { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.ai { margin-top: 4px; padding: 6px 8px; border-left: 3px solid var(--accent); background: var(--accent-soft); border-radius: 4px; font-size: 13px; }
 .act { margin-top: 3px; color: var(--accent); font-weight: 500; }
-.kw { background: var(--chip); font-family: var(--mono); font-size: 11px; padding: 1px 6px; border-radius: 3px; }
+.kw { background: var(--chip); font-family: var(--mono); font-size: 11px; padding: 1px 6px; border-radius: 4px; }
 .kw.sig { background: transparent; border: 1px solid var(--line); }
-.empty { padding: 24px; color: var(--muted); text-align: center; }
+.empty { padding: 24px; color: var(--muted); text-align: center; grid-column: 1 / -1; }
 .count { font-family: var(--mono); font-size: 12px; color: var(--muted); }
-.sect-head { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: baseline; justify-content: space-between; margin-bottom: 8px; }
+pre.note { white-space: pre-wrap; font-family: inherit; font-size: 13px; line-height: 1.5; border: 1px solid var(--line); border-radius: var(--r); padding: 14px; max-height: 70vh; overflow: auto; background: var(--panel); margin: 0; }
 footer { color: var(--muted); font-size: 12px; margin-top: 24px; }
-@media (max-width: 640px) { table { min-width: 640px; } .tile .n { font-size: 22px; } .card .chartbox { height: 160px; } }
-@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+@media (max-width: 640px) { table { min-width: 640px; } .tile .n { font-size: 22px; } .card .chartbox { height: 160px; } .dates input { width: 118px; } .pt .pop { left: auto; right: 0; } }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } .pt:hover, .g:hover { transform: none; } }
 </style>
 </head>
 <body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 5-3.5 8.5-7 10-3.5-1.5-7-5-7-10V6l7-3z"/><path d="M9 12l2 2 4-4"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
+  <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 3v6h-6"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></symbol>
+  <symbol id="i-chev" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol>
+  <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></symbol>
+  <symbol id="i-list" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+  <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 10v6M12 7h.01"/></symbol>
+</svg>
 <div class="wrap">
 <header>
-  <div class="brand"><span class="dot" id="dot"></span><div><h1>Threat Intel Watch</h1><div class="runs" id="runs">loading…</div></div></div>
+  <div class="brand"><span class="logo"><svg class="i"><use href="#i-shield"/></svg></span><div><h1>Threat Intel Watch</h1><div class="sub">CISA KEV · NVD · EPSS · advisories · news — filtered to the products we manage</div></div></div>
   <div class="hdr-actions">
-    <span class="count" id="mode"></span>
-    <button class="btn" id="theme" type="button" title="Toggle theme">◐</button>
-    <button class="btn" id="refresh" type="button">Refresh</button>
+    <span class="mode"><span class="dot" id="dot"></span><span id="mode">loading</span></span>
+    <button class="btn icon" id="theme" type="button" title="Toggle light / dark" aria-label="Toggle theme"><svg class="i"><use href="#i-sun"/></svg></button>
+    <button class="btn" id="refresh" type="button"><svg class="i"><use href="#i-refresh"/></svg>Refresh</button>
   </div>
 </header>
 
 <div class="notice" id="demoNotice" hidden>Showing <strong>sample data</strong>. Set <code>SUPABASE_URL</code> and <code>SUPABASE_ANON_KEY</code> at the top of the script to read live data.</div>
+
+<div class="pipe-head"><span class="label">Pipeline status · scheduled n8n workflows (read-only, hover for details)</span><span class="count" id="runsNote"></span></div>
+<div class="pipe" id="pipe"></div>
 
 <div class="tabs" role="tablist">
   <button class="tab" role="tab" data-tab="overview" aria-selected="true">Overview</button>
@@ -154,13 +233,18 @@ footer { color: var(--muted); font-size: 12px; margin-top: 24px; }
   <button class="tab" role="tab" data-tab="note">Ticket note</button>
 </div>
 
-<div class="bar">
-  <div class="row">
-    <input id="q" type="search" placeholder="Search CVE, vendor, product, title, keyword…" aria-label="Search">
-    <span class="label">Window</span>
-    <select id="win"><option value="1">24 h</option><option value="7">7 days</option><option value="30" selected>30 days</option><option value="90">90 days</option><option value="0">All</option></select>
+<div class="filters">
+  <div class="fbar">
+    <div class="frow">
+      <label class="search"><svg class="i"><use href="#i-search"/></svg><input id="q" type="search" placeholder="Search CVE, vendor, product, title, keyword…" aria-label="Search"></label>
+      <div class="seg" id="winSeg" role="group" aria-label="Time window">
+        <button type="button" data-days="1">24 h</button><button type="button" data-days="7">7 d</button><button type="button" data-days="30" aria-pressed="true">30 d</button><button type="button" data-days="90">90 d</button><button type="button" data-days="0">All</button>
+      </div>
+      <span class="dates"><input id="dFrom" type="date" aria-label="From date"><span>→</span><input id="dTo" type="date" aria-label="To date"></span>
+    </div>
+    <div class="frow" id="ddRow"></div>
+    <div class="active" id="activeRow"></div>
   </div>
-  <div class="row" id="chipsRow"></div>
 </div>
 
 <section id="tab-overview">
@@ -178,33 +262,36 @@ footer { color: var(--muted); font-size: 12px; margin-top: 24px; }
 </section>
 
 <section id="tab-kev" hidden>
-  <div class="sect-head"><h2>Known Exploited Vulnerabilities in our stack</h2><span class="count" id="kevCount"></span></div>
-  <div class="tablewrap"><table id="kev" data-sort="date_added" data-dir="desc">
+  <div class="sect-head"><div><h2>Known Exploited Vulnerabilities in our stack</h2><span class="count" id="kevCount"></span></div><div class="r"><span class="seg view" data-for="kev"><button type="button" data-view="tiles" aria-pressed="true" title="Tiles"><svg class="i"><use href="#i-grid"/></svg></button><button type="button" data-view="table" title="Table"><svg class="i"><use href="#i-list"/></svg></button></span></div></div>
+  <div class="grid" id="kevGrid"></div>
+  <div class="tablewrap" id="kevTable" hidden><table id="kev" data-sort="date_added" data-dir="desc">
     <thead><tr><th class="mono" data-k="cve_id">CVE</th><th data-k="cvss_score">Severity</th><th data-k="epss_score">EPSS</th><th data-k="product_group">Product</th><th>Vulnerability · summary</th><th class="mono" data-k="date_added">Added</th><th class="mono" data-k="due_date">Fed. due</th><th data-k="ransomware">Ransomware</th></tr></thead>
     <tbody></tbody></table></div>
 </section>
 
 <section id="tab-watch" hidden>
-  <div class="sect-head"><h2>High-severity CVEs in our stack · NVD, CVSS ≥ 7</h2><span class="count" id="watchCount"></span></div>
-  <div class="tablewrap"><table id="watch" data-sort="published_at" data-dir="desc">
+  <div class="sect-head"><div><h2>High-severity CVEs in our stack · NVD, CVSS ≥ 7</h2><span class="count" id="watchCount"></span></div><div class="r"><span class="seg view" data-for="watch"><button type="button" data-view="tiles" aria-pressed="true" title="Tiles"><svg class="i"><use href="#i-grid"/></svg></button><button type="button" data-view="table" title="Table"><svg class="i"><use href="#i-list"/></svg></button></span></div></div>
+  <div class="grid" id="watchGrid"></div>
+  <div class="tablewrap" id="watchTable" hidden><table id="watch" data-sort="published_at" data-dir="desc">
     <thead><tr><th class="mono" data-k="cve_id">CVE</th><th data-k="cvss_score">Severity</th><th data-k="epss_score">EPSS</th><th data-k="product_group">Product</th><th>Description · summary</th><th class="mono" data-k="published_at">Published</th><th>Status</th></tr></thead>
     <tbody></tbody></table></div>
 </section>
 
 <section id="tab-articles" hidden>
-  <div class="sect-head"><h2>Articles</h2><span class="count" id="artCount"></span></div>
-  <div class="tablewrap"><table id="arts" data-sort="score" data-dir="desc">
+  <div class="sect-head"><div><h2>Articles and advisories</h2><span class="count" id="artCount"></span></div><div class="r"><span class="seg view" data-for="arts"><button type="button" data-view="tiles" aria-pressed="true" title="Tiles"><svg class="i"><use href="#i-grid"/></svg></button><button type="button" data-view="table" title="Table"><svg class="i"><use href="#i-list"/></svg></button></span></div></div>
+  <div class="grid" id="artsGrid"></div>
+  <div class="tablewrap" id="artsTable" hidden><table id="arts" data-sort="score" data-dir="desc">
     <thead><tr><th class="mono" data-k="score">Score</th><th data-k="title">Title · summary</th><th data-k="product_group">Product · source</th><th>Why it was kept</th><th class="mono" data-k="published_at">Published</th></tr></thead>
     <tbody></tbody></table></div>
 </section>
 
 <section id="tab-note" hidden>
-  <div class="sect-head"><h2>Daily ticket note</h2><span class="count" id="noteMeta"></span><span><button class="btn" id="copyNote" type="button">Copy note</button></span></div>
-  <p class="muted" id="noteHelp">Plain-text summary of the last 24 h (new KEV entries, new high-severity CVEs in our stack, relevant news). Generated each weekday at 07:00 by TI 07 and emailed; paste it into the ticket note as normal text.</p>
-  <pre id="noteBody" style="white-space:pre-wrap;font-family:inherit;font-size:13px;line-height:1.5;border:1px solid var(--line);border-radius:8px;padding:14px;max-height:70vh;overflow:auto"></pre>
+  <div class="sect-head"><div><h2>Daily ticket note</h2><span class="count" id="noteMeta"></span></div><button class="btn" id="copyNote" type="button"><svg class="i"><use href="#i-copy"/></svg><span>Copy note</span></button></div>
+  <p class="muted" style="margin-top:0">Plain-text summary of the last 24 h (new KEV entries, new high-severity CVEs in our stack, relevant news). Generated each weekday at 07:00 by TI 07 and emailed; paste it into the ticket note as normal text.</p>
+  <pre class="note" id="noteBody"></pre>
 </section>
 
-<footer>Summaries by Claude (Haiku). Sources: CISA KEV · NVD · FIRST EPSS · CISA advisories · ASD ACSC · MSRC · Fortinet PSIRT · BleepingComputer · The Hacker News · AskWoody. Pipeline: n8n → Supabase → email / Teams.</footer>
+<footer>Summaries by Claude (Haiku). Sources: CISA KEV · NVD · FIRST EPSS · CISA advisories · ASD ACSC · MSRC · Fortinet PSIRT · BleepingComputer · The Hacker News · AskWoody. Pipeline: n8n → Supabase → email / ticket note.</footer>
 </div>
 
 <script>
@@ -214,6 +301,15 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 // ==================================================
 
 const SIGNALS = new Set(["zero-day","0-day","actively exploited","in the wild","exploited","ransomware","critical","rce","remote code execution","authentication bypass","patch now","emergency","out-of-band","cve-","australia","australian","msp","mssp","rmm","supply chain","phishing","data breach","chromium-edge-batch"]);
+const WORKFLOWS = [
+  { kind: "kev", name: "KEV Monitor", wf: "TI 01", schedule: "daily 06:00", maxH: 30, what: "new CISA KEV entries for our products" },
+  { kind: "news-collect", name: "News Collector", wf: "TI 02", schedule: "hourly", maxH: 3, what: "articles fetched and scored" },
+  { kind: "news", name: "Daily Digest", wf: "TI 03", schedule: "weekdays 06:45", maxH: 80, what: "relevant articles emailed" },
+  { kind: "cve-watch", name: "CVE Watch", wf: "TI 04", schedule: "every 6 h", maxH: 13, what: "new CVSS ≥ 7 CVEs in our stack" },
+  { kind: "kev-enrich", name: "KEV Enrich", wf: "TI 05", schedule: "every 2 h", maxH: 5, what: "KEV rows enriched (CVSS, EPSS, summary)" },
+  { kind: "ai-summaries", name: "AI Summaries", wf: "TI 06", schedule: "hourly", maxH: 3, what: "articles summarised by Claude" },
+  { kind: "ticket-note", name: "Ticket note", wf: "TI 07", schedule: "weekdays 07:00", maxH: 80, what: "items in the daily note" },
+];
 const DAY = 86400000;
 const now = () => Date.now();
 const iso = (d) => new Date(d).toISOString();
@@ -245,13 +341,14 @@ const SAMPLE = {
     {link:"https://thehackernews.com/sample-7",title:"Crypto exchange loses $40M in smart-contract exploit",source:"The Hacker News",published_at:iso(now()-2*DAY),summary:"DeFi platform drained after reentrancy bug.",score:0,matched_terms:[],relevant:false}
   ],
   runs: [
-    {kind:"kev",sent_at:iso(now()-0.5*DAY),item_count:2},{kind:"news-collect",sent_at:iso(now()-0.04*DAY),item_count:37},
-    {kind:"cve-watch",sent_at:iso(now()-0.2*DAY),item_count:2},{kind:"kev-enrich",sent_at:iso(now()-0.1*DAY),item_count:60},{kind:"news",sent_at:iso(now()-0.5*DAY),item_count:8}
+    {kind:"kev",sent_at:iso(now()-0.5*DAY),item_count:2},{kind:"news-collect",sent_at:iso(now()-0.04*DAY),item_count:37},{kind:"news-collect",sent_at:iso(now()-0.08*DAY),item_count:41},
+    {kind:"cve-watch",sent_at:iso(now()-0.2*DAY),item_count:2},{kind:"kev-enrich",sent_at:iso(now()-0.1*DAY),item_count:60},{kind:"news",sent_at:iso(now()-0.5*DAY),item_count:8},{kind:"ai-summaries",sent_at:iso(now()-0.05*DAY),item_count:12},{kind:"ticket-note",sent_at:iso(now()-0.48*DAY),item_count:3}
   ]
 };
 
 let data = { kev: [], watch: [], articles: [], runs: [], notes: [] };
-const state = { tab: "overview", q: "", days: 30, chips: { sev: new Set(), vendor: new Set(), source: new Set(), flags: new Set(["relevant"]) } };
+const state = { tab: "overview", q: "", days: 30, from: null, to: null, view: { kev: "tiles", watch: "tiles", arts: "tiles" }, chips: { sev: new Set(), vendor: new Set(), source: new Set(), flags: new Set(["relevant"]) } };
+const FLAG_LABELS = { new: "New (24 h)", ransomware: "Ransomware known", notkev: "Not yet in KEV", expand: "Expand browser batches", relevant: "Relevant only" };
 const charts = {};
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
@@ -263,10 +360,11 @@ const fmtDT = (s) => s ? new Date(s).toLocaleString("en-AU", {day:"2-digit", mon
 const ago = (s) => { if (!s) return "never"; const m = Math.round((now() - new Date(s)) / 60000); return m < 60 ? `${m} min ago` : m < 1440 ? `${Math.round(m/60)} h ago` : `${Math.round(m/1440)} d ago`; };
 const sevOf = (r) => r.cvss_severity || (r.cvss_score != null ? (r.cvss_score >= 9 ? "CRITICAL" : r.cvss_score >= 7 ? "HIGH" : r.cvss_score >= 4 ? "MEDIUM" : "LOW") : null);
 const sevHtml = (r) => { const s = sevOf(r); return s ? `<span class="sev ${s}">${s} ${r.cvss_score ?? ""}</span>` : `<span class="sev NA">n/a</span>`; };
-const epssHtml = (r) => r.epss_score == null ? `<span class="muted mono">–</span>` : `<span class="epss"><span>${(r.epss_score*100).toFixed(1)}%</span><span class="trk"><span class="fill" style="width:${Math.max(2, r.epss_score*100)}%"></span></span></span>`;
+const epssHtml = (r) => r.epss_score == null ? `<span class="muted mono">EPSS –</span>` : `<span class="epss"><span>${(r.epss_score*100).toFixed(1)}%</span><span class="trk"><span class="fill" style="width:${Math.max(2, r.epss_score*100)}%"></span></span></span>`;
 const isNew = (d) => d && (now() - new Date(d)) < DAY * 1.05;
 const tsOf = (r, k) => r[k] ? new Date(r[k]).getTime() : 0;
 const cssVar = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const aiBlock = (r) => r.ai_summary ? `<div class="ai">${esc(r.ai_summary)}${r.ai_reason ? `<div class="act">→ ${esc(r.ai_reason)}</div>` : ""}</div>` : (r.ai_reason ? `<div class="act">→ ${esc(r.ai_reason)}</div>` : "");
 
 async function sb(path) {
   const r = await fetch(`${SUPABASE_URL.replace(/\/+$/, "")}/rest/v1/${path}`, { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } });
@@ -286,26 +384,48 @@ async function load() {
         sb(`kev_entries?order=date_added.desc&limit=1000`),
         sb(`cve_watch?order=published_at.desc&limit=500`).catch(() => []),
         sb(`articles?published_at=gte.${since}&order=score.desc,published_at.desc&limit=1000`),
-        sb(`digest_log?order=sent_at.desc&limit=50`).catch(() => []),
+        sb(`digest_log?order=sent_at.desc&limit=200`).catch(() => []),
         sb(`ticket_notes?order=note_date.desc&limit=7`).catch(() => []),
       ]);
       data = { kev, watch, articles, runs, notes };
     } else data = SAMPLE;
   } catch (e) {
-    $("#runs").textContent = `load failed: ${e.message}`;
+    $("#runsNote").textContent = `load failed: ${e.message}`;
     return;
   }
-  renderRuns(); buildChips(); render();
+  renderPipeline(); buildFilters(); render();
 }
 
-function renderRuns() {
-  const last = (k) => data.runs.find(r => r.kind === k);
-  const parts = [["KEV", "kev"], ["News", "news-collect"], ["CVE Watch", "cve-watch"], ["Enrich", "kev-enrich"], ["Digest", "news"]]
-    .map(([l, k]) => `${l} <b>${ago(last(k)?.sent_at)}</b>`);
-  $("#runs").innerHTML = parts.join(" · ");
+// ----- pipeline status tiles (read-only indicators of the scheduled n8n runs)
+function renderPipeline() {
+  const html = WORKFLOWS.map(w => {
+    const runs = data.runs.filter(r => r.kind === w.kind).sort((a, b) => tsOf(b, "sent_at") - tsOf(a, "sent_at"));
+    const last = runs[0];
+    const hrs = last ? (now() - new Date(last.sent_at)) / 36e5 : Infinity;
+    const st = !last ? "" : hrs <= w.maxH ? "ok" : "late";
+    const stText = !last ? "no run recorded yet" : st === "ok" ? "on schedule" : "later than expected";
+    const hist = runs.slice(0, 4).map(r => `<span>${fmtDT(r.sent_at)} · ${r.item_count ?? 0} items</span>`).join("");
+    return `<div class="pt" tabindex="0" aria-label="${esc(w.name)}: last run ${esc(ago(last?.sent_at))}">
+      <span class="nm"><span class="st ${st}"></span>${esc(w.name)}</span>
+      <span class="ago">${esc(ago(last?.sent_at))}</span>
+      <span class="sch">${esc(w.wf)} · ${esc(w.schedule)}</span>
+      <div class="pop" role="tooltip">
+        <div class="row"><b>${esc(w.wf)} – ${esc(w.name)}</b><span class="muted">${esc(stText)}</span></div>
+        <div class="row"><span class="muted">Schedule</span><span>${esc(w.schedule)}</span></div>
+        <div class="row"><span class="muted">Last run</span><span class="mono">${esc(fmtDT(last?.sent_at))}</span></div>
+        <div class="row"><span class="muted">Last result</span><span>${last ? `${esc(last.item_count ?? 0)} ${esc(w.what)}` : "–"}</span></div>
+        ${hist ? `<div class="hist">${hist}</div>` : ""}
+      </div></div>`;
+  }).join("");
+  $("#pipe").innerHTML = html;
+  $("#runsNote").textContent = data.runs.length ? `${data.runs.length} runs logged` : "";
 }
 
-function inWindow(ts) { return !state.days || ts >= now() - state.days * DAY; }
+// ----- filtering
+function inWindow(ts) {
+  if (state.from != null || state.to != null) return (state.from == null || ts >= state.from) && (state.to == null || ts <= state.to);
+  return !state.days || ts >= now() - state.days * DAY;
+}
 function hit(s) { return !state.q || String(s).toLowerCase().includes(state.q); }
 function kevRows() { return data.kev.filter(k => inWindow(tsOf(k, "date_added")) && hit(`${k.cve_id} ${k.vendor} ${k.product} ${k.vuln_name} ${k.product_group||""} ${k.ai_summary||""}`)
   && (!state.chips.sev.size || state.chips.sev.has(sevOf(k) || "NA")) && (!state.chips.vendor.size || state.chips.vendor.has(k.product_group || "Other"))
@@ -324,55 +444,107 @@ function collapseBatches(rows) {
 function watchRows() { const kevIds = new Set(data.kev.map(k => k.cve_id)); return collapseBatches(data.watch.map(w => ({...w, in_kev: kevIds.has(w.cve_id)})).filter(w => inWindow(tsOf(w, "published_at")) && hit(`${w.cve_id} ${w.matched_vendor} ${w.description} ${(w.cpe_vendors||[]).join(" ")} ${w.batch_key||""}`)
   && (!state.chips.sev.size || state.chips.sev.has(sevOf(w) || "NA")) && (!state.chips.vendor.size || state.chips.vendor.has(w.product_group || "Other"))
   && (!state.chips.flags.has("notkev") || !w.in_kev) && (!state.chips.flags.has("new") || isNew(w.published_at)))); }
+const artKept = (a) => a.relevant && a.ai_verdict !== false;
 function artRows() { return data.articles.filter(a => inWindow(tsOf(a, "published_at")) && hit(`${a.title} ${a.summary} ${(a.matched_terms||[]).join(" ")}`)
-  && (!state.chips.source.size || state.chips.source.has(a.source)) && (!state.chips.vendor.size || state.chips.vendor.has(a.product_group || "General")) && (!state.chips.flags.has("relevant") || (a.relevant && a.ai_verdict !== false)) && (!state.chips.flags.has("new") || isNew(a.published_at))); }
+  && (!state.chips.source.size || state.chips.source.has(a.source)) && (!state.chips.vendor.size || state.chips.vendor.has(a.product_group || "General")) && (!state.chips.flags.has("relevant") || artKept(a)) && (!state.chips.flags.has("new") || isNew(a.published_at))); }
 
-function buildChips() {
-  const row = $("#chipsRow"); row.innerHTML = "";
-  const add = (group, key, label, count, cls = "") => {
-    const b = document.createElement("button"); b.type = "button"; b.className = `chip ${cls}`; b.dataset.group = group; b.dataset.key = key;
-    b.setAttribute("aria-pressed", state.chips[group].has(key)); b.innerHTML = `${esc(label)}${count != null ? ` <span class="c">${count}</span>` : ""}`;
-    b.addEventListener("click", () => { const s = state.chips[group]; s.has(key) ? s.delete(key) : s.add(key); b.setAttribute("aria-pressed", s.has(key)); render(); });
-    row.appendChild(b);
+// ----- filter dropdowns (one <details> per category; chips inside are real buttons with aria-pressed)
+function buildFilters() {
+  const row = $("#ddRow"); row.innerHTML = "";
+  const dd = (group, title, items, cls = () => "") => {
+    if (!items.length) return;
+    const d = document.createElement("details"); d.className = "dd"; d.dataset.group = group;
+    d.innerHTML = `<summary>${esc(title)} <span class="cnt"></span><svg class="i"><use href="#i-chev"/></svg></summary><div class="menu"></div>`;
+    const menu = d.querySelector(".menu");
+    for (const [key, label, count] of items) {
+      const b = document.createElement("button"); b.type = "button"; b.className = `chip ${cls(key)}`;
+      b.setAttribute("aria-pressed", state.chips[group].has(key)); b.innerHTML = `${esc(label)}${count != null ? ` <span class="c">${count}</span>` : ""}`;
+      b.addEventListener("click", () => { const s = state.chips[group]; s.has(key) ? s.delete(key) : s.add(key); b.setAttribute("aria-pressed", s.has(key)); syncCounts(); render(); });
+      menu.appendChild(b);
+    }
+    d.addEventListener("toggle", () => { if (d.open) $$("details.dd[open]").forEach(o => { if (o !== d) o.open = false; }); });
+    row.appendChild(d);
   };
-  const lbl = (t) => { const s = document.createElement("span"); s.className = "label"; s.textContent = t; row.appendChild(s); };
-  if (state.tab === "kev" || state.tab === "watch" || state.tab === "overview") {
-    lbl("Severity"); const pool = state.tab === "watch" ? data.watch : data.kev;
-    for (const s of ["CRITICAL", "HIGH", "MEDIUM", "LOW"]) add("sev", s, s.charAt(0) + s.slice(1).toLowerCase(), pool.filter(r => sevOf(r) === s).length, `sev-${s}`);
-    lbl("Product"); const vc = {}; for (const r of pool) { const g = r.product_group || "Other"; vc[g] = (vc[g] || 0) + 1; }
-    Object.entries(vc).sort((a, b) => b[1] - a[1]).slice(0, 12).forEach(([v, c]) => add("vendor", v, v, c));
+  const t = state.tab;
+  if (t === "kev" || t === "watch" || t === "overview") {
+    const pool = t === "watch" ? data.watch : data.kev;
+    dd("sev", "Severity", ["CRITICAL", "HIGH", "MEDIUM", "LOW"].map(s => [s, s.charAt(0) + s.slice(1).toLowerCase(), pool.filter(r => sevOf(r) === s).length]), k => `sev-${k}`);
+    const vc = {}; for (const r of pool) { const g = r.product_group || "Other"; vc[g] = (vc[g] || 0) + 1; }
+    dd("vendor", "Product", Object.entries(vc).sort((a, b) => b[1] - a[1]).map(([v, c]) => [v, v, c]));
   }
-  if (state.tab === "articles") {
-    lbl("Product"); const pc = {}; for (const a of data.articles) if (a.relevant && a.ai_verdict !== false) { const g = a.product_group || "General"; pc[g] = (pc[g] || 0) + 1; }
-    Object.entries(pc).sort((a, b) => b[1] - a[1]).slice(0, 12).forEach(([v, c]) => add("vendor", v, v, c));
-    lbl("Source"); const sc = {}; for (const a of data.articles) sc[a.source] = (sc[a.source] || 0) + 1;
-    Object.entries(sc).sort((a, b) => b[1] - a[1]).forEach(([s, c]) => add("source", s, s, c));
+  if (t === "articles") {
+    const pc = {}; for (const a of data.articles) if (artKept(a)) { const g = a.product_group || "General"; pc[g] = (pc[g] || 0) + 1; }
+    dd("vendor", "Product", Object.entries(pc).sort((a, b) => b[1] - a[1]).map(([v, c]) => [v, v, c]));
+    const sc = {}; for (const a of data.articles) sc[a.source] = (sc[a.source] || 0) + 1;
+    dd("source", "Source", Object.entries(sc).sort((a, b) => b[1] - a[1]).map(([s, c]) => [s, s, c]));
   }
-  lbl("Flags"); add("flags", "new", "New (24 h)");
-  if (state.tab === "kev" || state.tab === "overview") add("flags", "ransomware", "Ransomware known");
-  if (state.tab === "watch") { add("flags", "notkev", "Not yet in KEV"); add("flags", "expand", "Expand browser batches"); }
-  if (state.tab === "articles") add("flags", "relevant", "Relevant only");
+  const flags = [["new", FLAG_LABELS.new]];
+  if (t === "kev" || t === "overview") flags.push(["ransomware", FLAG_LABELS.ransomware]);
+  if (t === "watch") flags.push(["notkev", FLAG_LABELS.notkev], ["expand", FLAG_LABELS.expand]);
+  if (t === "articles") flags.push(["relevant", FLAG_LABELS.relevant]);
+  dd("flags", "Flags", flags.map(([k, l]) => [k, l, null]));
+  const sp = document.createElement("span"); sp.className = "spacer"; row.appendChild(sp);
+  const clr = document.createElement("button"); clr.type = "button"; clr.className = "link"; clr.id = "clearAll"; clr.textContent = "Clear filters";
+  clr.addEventListener("click", () => { for (const k of Object.keys(state.chips)) state.chips[k].clear(); state.chips.flags.add("relevant"); state.q = ""; $("#q").value = ""; setWindow(30); buildFilters(); render(); });
+  row.appendChild(clr);
+  syncCounts();
+}
+function syncCounts() {
+  $$("details.dd").forEach(d => { const n = state.chips[d.dataset.group].size; d.querySelector(".cnt").textContent = n ? n : ""; });
+  const ar = $("#activeRow"); ar.innerHTML = "";
+  const tabFlags = { overview: ["new", "ransomware"], kev: ["new", "ransomware"], watch: ["new", "notkev", "expand"], articles: ["new", "relevant"], note: [] }[state.tab] || [];
+  for (const [group, set] of Object.entries(state.chips)) for (const key of set) {
+    if (group === "flags" && !tabFlags.includes(key)) continue;
+    if (group === "source" && state.tab !== "articles") continue;
+    const label = group === "flags" ? FLAG_LABELS[key] || key : group === "sev" ? key.charAt(0) + key.slice(1).toLowerCase() : key;
+    const el = document.createElement("span"); el.className = "act-chip"; el.innerHTML = `${esc(label)}<button type="button" aria-label="Remove filter ${esc(label)}"><svg class="i" style="width:12px;height:12px"><use href="#i-x"/></svg></button>`;
+    el.querySelector("button").addEventListener("click", () => { set.delete(key); buildFilters(); render(); });
+    ar.appendChild(el);
+  }
+  if (state.from != null || state.to != null) {
+    const el = document.createElement("span"); el.className = "act-chip"; el.innerHTML = `${state.from != null ? fmtD(state.from) : "…"} → ${state.to != null ? fmtD(state.to - 1) : "…"}<button type="button" aria-label="Clear date range"><svg class="i" style="width:12px;height:12px"><use href="#i-x"/></svg></button>`;
+    el.querySelector("button").addEventListener("click", () => { setWindow(30); render(); });
+    ar.appendChild(el);
+  }
+}
+function setWindow(days) {
+  state.days = days; state.from = null; state.to = null;
+  $$("#winSeg button").forEach(b => b.setAttribute("aria-pressed", Number(b.dataset.days) === days));
+  $("#dFrom").value = days ? new Date(now() - days * DAY).toISOString().slice(0, 10) : ""; $("#dTo").value = new Date(now()).toISOString().slice(0, 10);
+  syncCounts();
+}
+function setCustomRange() {
+  const f = $("#dFrom").value, t = $("#dTo").value;
+  state.from = f ? new Date(f + "T00:00:00").getTime() : null;
+  state.to = t ? new Date(t + "T00:00:00").getTime() + DAY : null;
+  if (state.from == null && state.to == null) { setWindow(0); return; }
+  $$("#winSeg button").forEach(b => b.setAttribute("aria-pressed", false));
+  syncCounts(); buildFilters(); render();
 }
 
+// ----- render
 function render() {
   const kev = kevRows(), watch = watchRows(), arts = artRows();
   $("#nKev").textContent = data.kev.filter(k => inWindow(tsOf(k, "date_added"))).length;
   $("#nWatch").textContent = data.watch.filter(w => inWindow(tsOf(w, "published_at"))).length;
-  $("#nArt").textContent = data.articles.filter(a => a.relevant && a.ai_verdict !== false && inWindow(tsOf(a, "published_at"))).length;
+  $("#nArt").textContent = data.articles.filter(a => artKept(a) && inWindow(tsOf(a, "published_at"))).length;
   $$("section[id^=tab-]").forEach(s => s.hidden = s.id !== `tab-${state.tab}`);
+  $(".filters").hidden = state.tab === "note";
   if (state.tab === "overview") renderOverview(kev, watch, arts);
-  renderKev(kev); renderWatch(watch); renderArts(arts); renderNote();
+  if (state.tab === "kev") renderKev(kev);
+  if (state.tab === "watch") renderWatch(watch);
+  if (state.tab === "articles") renderArts(arts);
+  if (state.tab === "note") renderNote();
 }
 
 function renderNote() {
-  const notes = Array.isArray(data.notes) ? data.notes : [];
-  const n = notes[0];
+  const n = (Array.isArray(data.notes) ? data.notes : [])[0];
   $("#noteBody").textContent = n ? String(n.note || "") : "No ticket note yet. TI 07 runs weekdays at 07:00 (or run it manually in n8n) and the latest note appears here.";
   $("#noteMeta").textContent = n ? `${n.note_date} · KEV ${n.counts?.kev ?? 0} · CVEs ${n.counts?.watch ?? 0} · news ${n.counts?.articles ?? 0}` : "";
   $("#copyNote").disabled = !n;
 }
 $("#copyNote").addEventListener("click", async () => {
-  const b = $("#copyNote"); try { await navigator.clipboard.writeText($("#noteBody").textContent); b.textContent = "Copied"; } catch { b.textContent = "Select and copy manually"; } setTimeout(() => b.textContent = "Copy note", 2000);
+  const b = $("#copyNote span"); try { await navigator.clipboard.writeText($("#noteBody").textContent); b.textContent = "Copied"; } catch { b.textContent = "Select and copy manually"; } setTimeout(() => b.textContent = "Copy note", 2000);
 });
 
 function renderOverview(kev, watch, arts) {
@@ -381,37 +553,30 @@ function renderOverview(kev, watch, arts) {
   const newKev = data.kev.filter(k => isNew(k.date_added)).length;
   const newWatch = collapseBatches(data.watch.filter(w => isNew(w.published_at))).length;
   const crit = [...kev, ...watch].filter(r => sevOf(r) === "CRITICAL").length;
-  const relevant = data.articles.filter(a => a.relevant && a.ai_verdict !== false && inWindow(tsOf(a, "published_at"))).length;
+  const relevant = data.articles.filter(a => artKept(a) && inWindow(tsOf(a, "published_at"))).length;
   const total = data.articles.filter(a => inWindow(tsOf(a, "published_at"))).length;
-  const wl = state.days ? `last ${state.days} d` : "all time";
+  const wl = state.from != null || state.to != null ? "custom range" : state.days ? `last ${state.days} d` : "all time";
   $("#strip").innerHTML = [
     tile(kev.length, "KEV in scope", wl, newKev ? "info" : ""), tile(rw, "ransomware known", "patch first", rw ? "crit" : ""),
     tile(due7, "federal due ≤ 7 d", "CISA BOD 22-01", due7 ? "high" : ""), tile(newWatch, "new high-sev CVEs (24 h)", "not yet exploited", newWatch ? "high" : ""),
     tile(crit, "critical (CVSS ≥ 9)", "KEV + watch", crit ? "crit" : ""), tile(relevant, "relevant articles", `of ${total} collected`, "info"),
-    tile(total ? Math.round(100 - relevant / total * 100) : 0, "% noise removed", "keyword scoring", ""),
+    tile(total ? Math.round(100 - relevant / total * 100) : 0, "% noise removed", "keyword + AI screening", ""),
   ].join("");
-
-  // KEV per day (last 30 days)
   const days = [...Array(30)].map((_, i) => new Date(now() - (29 - i) * DAY).toISOString().slice(0, 10));
   const cnt = Object.fromEntries(days.map(d => [d, 0])); for (const k of data.kev) if (k.date_added in cnt) cnt[k.date_added]++;
   chart("cKev", "bar", { labels: days.map(d => d.slice(5)), datasets: [{ data: days.map(d => cnt[d]), backgroundColor: cssVar("--accent"), borderRadius: 3 }] },
     { scales: { x: { ticks: { maxTicksLimit: 8 } }, y: { beginAtZero: true, ticks: { precision: 0 } } } });
-  // Severity doughnut
   const sevs = ["CRITICAL", "HIGH", "MEDIUM", "LOW"]; const pool = [...kev, ...watch];
   chart("cSev", "doughnut", { labels: sevs.map(s => s.charAt(0) + s.slice(1).toLowerCase()), datasets: [{ data: sevs.map(s => pool.filter(r => sevOf(r) === s).length), backgroundColor: [cssVar("--crit"), cssVar("--high"), cssVar("--med"), cssVar("--low")], borderWidth: 0 }] },
     { cutout: "62%", plugins: { legend: { position: "right" } } });
-  // Articles by source
-  const sc = {}; for (const a of data.articles) if (a.relevant && a.ai_verdict !== false && inWindow(tsOf(a, "published_at"))) sc[a.source] = (sc[a.source] || 0) + 1;
+  const sc = {}; for (const a of data.articles) if (artKept(a) && inWindow(tsOf(a, "published_at"))) sc[a.source] = (sc[a.source] || 0) + 1;
   const se = Object.entries(sc).sort((a, b) => b[1] - a[1]);
   chart("cSrc", "bar", { labels: se.map(e => e[0]), datasets: [{ data: se.map(e => e[1]), backgroundColor: cssVar("--info"), borderRadius: 3 }] },
     { indexAxis: "y", scales: { x: { beginAtZero: true, ticks: { precision: 0 } } } });
-
-  // Exposure by product
   const pc = {}; for (const r of [...kev, ...watch]) { const g = r.product_group || "Other"; pc[g] = (pc[g] || 0) + (r._n || 1); }
   const pe = Object.entries(pc).sort((a, b) => b[1] - a[1]).slice(0, 10);
   chart("cProd", "bar", { labels: pe.map(e => e[0]), datasets: [{ data: pe.map(e => e[1]), backgroundColor: cssVar("--high"), borderRadius: 3 }] },
     { indexAxis: "y", scales: { x: { beginAtZero: true, ticks: { precision: 0 } } } });
-  // Priority list: KEV ransomware → KEV by EPSS → watch by EPSS
   const rank = (r, src) => (src === "kev" ? 1000 : 0) + (r.ransomware === "Known" ? 500 : 0) + (r.epss_score || 0) * 100 + (r.cvss_score || 0);
   const items = [...kev.map(k => ({ ...k, _src: "kev", _why: `${k.ransomware === "Known" ? "ransomware use known · " : ""}exploited (KEV) · due ${fmtD(k.due_date)}` })),
                  ...watch.filter(w => !w.in_kev).map(w => ({ ...w, _src: "watch", _why: `CVSS ${w.cvss_score} · EPSS ${w.epss_score == null ? "–" : (w.epss_score*100).toFixed(1) + "%"} · not in KEV` }))]
@@ -421,8 +586,8 @@ function renderOverview(kev, watch, arts) {
 }
 
 function renderStories(arts) {
-  const top = [...arts].filter(a => a.relevant).sort((a, b) => b.score - a.score || tsOf(b, "published_at") - tsOf(a, "published_at")).slice(0, 6);
-  $("#storiesCount").textContent = top.length ? `${top.length} of ${arts.filter(a => a.relevant).length}` : "";
+  const top = [...arts].filter(artKept).sort((a, b) => b.score - a.score || tsOf(b, "published_at") - tsOf(a, "published_at")).slice(0, 6);
+  $("#storiesCount").textContent = top.length ? `${top.length} of ${arts.filter(artKept).length}` : "";
   $("#stories").innerHTML = top.length ? top.map(a => `<div class="story">
     <div class="hd"><a href="${safeUrl(a.link)}" target="_blank" rel="noopener">${esc(a.title)}</a><span class="score">${a.score}</span>${isNew(a.published_at) ? `<span class="pill new">new</span>` : ""}</div>
     <div class="meta">${esc(a.product_group || "General")} · ${esc(a.source)} · ${fmtDT(a.published_at)}</div>
@@ -431,55 +596,79 @@ function renderStories(arts) {
   </div>`).join("") : `<div class="empty">No relevant articles in the current window.</div>`;
 }
 function clip(t, n) { t = String(t).replace(/\s+/g, " ").trim(); if (t.length <= n) return t; const cut = t.slice(0, n); return cut.slice(0, Math.max(cut.lastIndexOf(". "), cut.lastIndexOf(" "))) + "…"; }
-
 function tile(n, label, sub, cls) { return `<div class="tile ${cls}"><span class="label">${esc(label)}</span><span class="n">${esc(n)}</span><span class="sub">${esc(sub)}</span></div>`; }
-
 function chart(id, type, cdata, opts) {
   const fg = cssVar("--muted"), grid = cssVar("--line");
   Chart.defaults.color = fg; Chart.defaults.borderColor = grid; Chart.defaults.font.family = cssVar("--sans");
   if (charts[id]) charts[id].destroy();
   charts[id] = new Chart($("#" + id), { type, data: cdata, options: { responsive: true, maintainAspectRatio: false, animation: false, plugins: { legend: { display: type === "doughnut" } }, ...opts } });
 }
-
 function sortRows(rows, table) {
   const k = table.dataset.sort, dir = table.dataset.dir === "asc" ? 1 : -1;
   return [...rows].sort((a, b) => { const x = a[k] ?? -Infinity, y = b[k] ?? -Infinity; return (x > y ? 1 : x < y ? -1 : 0) * dir; });
 }
 function markSorted(table) { table.querySelectorAll("th").forEach(th => { th.classList.toggle("sorted", th.dataset.k === table.dataset.sort); th.classList.toggle("asc", th.dataset.k === table.dataset.sort && table.dataset.dir === "asc"); }); }
+function showView(key, gridId, tableId) { const tiles = state.view[key] === "tiles"; $("#" + gridId).hidden = !tiles; $("#" + tableId).hidden = tiles; }
 
+// ----- KEV
 function renderKev(rows) {
   const t = $("#kev"); markSorted(t); rows = sortRows(rows, t);
   $("#kevCount").textContent = `${rows.length} shown`;
+  showView("kev", "kevGrid", "kevTable");
+  $("#kevGrid").innerHTML = rows.length ? rows.map(k => `<article class="g ${k.ransomware === "Known" ? "rw" : ""}">
+      <div class="top"><a class="id" href="${cveUrl(k.cve_id)}" target="_blank" rel="noopener">${esc(k.cve_id)}</a>${sevHtml(k)}${isNew(k.date_added) ? `<span class="pill new">new</span>` : ""}${k.ransomware === "Known" ? `<span class="pill crit">ransomware</span>` : ""}<span class="spacer"></span><span class="grp">${esc(k.product_group || "Other")}</span></div>
+      <div class="ttl">${esc(k.vuln_name)}</div>
+      <div class="meta"><span>${esc(k.vendor)} ${esc(k.product)}</span></div>
+      ${k.ai_summary ? aiBlock(k) : `<div class="sum">${esc((k.description || "").slice(0, 200))}</div>`}
+      <div class="ft"><span>${epssHtml(k)}</span><span class="mono">added ${fmtD(k.date_added)} · due ${fmtD(k.due_date)}</span></div>
+    </article>`).join("") : `<div class="empty">No KEV entries match.</div>`;
   t.tBodies[0].innerHTML = rows.length ? rows.map(k => `
     <tr class="${k.ransomware === "Known" ? "rw" : ""}">
       <td class="mono"><a href="${cveUrl(k.cve_id)}" target="_blank" rel="noopener">${esc(k.cve_id)}</a>${isNew(k.date_added) ? ` <span class="pill new">new</span>` : ""}</td>
       <td>${sevHtml(k)}</td><td>${epssHtml(k)}</td>
       <td><div class="t">${esc(k.product_group || "Other")}</div><div class="s">${esc(k.vendor)} ${esc(k.product)}</div></td>
-      <td><div class="t">${esc(k.vuln_name)}</div>${k.ai_summary ? `<div class="ai">${esc(k.ai_summary)}${k.ai_reason ? `<div class="act">→ ${esc(k.ai_reason)}</div>` : ""}</div>` : `<div class="s">${esc((k.description || "").slice(0, 160))}</div>`}</td>
+      <td><div class="t">${esc(k.vuln_name)}</div>${k.ai_summary ? aiBlock(k) : `<div class="s">${esc((k.description || "").slice(0, 160))}</div>`}</td>
       <td class="mono">${fmtD(k.date_added)}</td><td class="mono">${fmtD(k.due_date)}</td>
       <td>${k.ransomware === "Known" ? `<span class="pill crit">Known</span>` : `<span class="pill muted">Unknown</span>`}</td></tr>`).join("")
     : `<tr><td colspan="8" class="empty">No KEV entries match.</td></tr>`;
 }
+// ----- CVE Watch
 function renderWatch(rows) {
   const t = $("#watch"); markSorted(t); rows = sortRows(rows, t);
   $("#watchCount").textContent = `${rows.length} shown`;
+  showView("watch", "watchGrid", "watchTable");
+  $("#watchGrid").innerHTML = rows.length ? rows.map(w => `<article class="g">
+      <div class="top">${w._batch ? `<span class="id">${esc(w._label)}</span><span class="pill muted">×${w._n}</span>` : `<a class="id" href="${cveUrl(w.cve_id)}" target="_blank" rel="noopener">${esc(w.cve_id)}</a>`}${sevHtml(w)}${isNew(w.published_at) ? `<span class="pill new">new</span>` : ""}${w.in_kev ? `<span class="pill kev">in KEV</span>` : ""}<span class="spacer"></span><span class="grp">${esc(w.product_group || "Other")}</span></div>
+      ${w.ai_summary ? aiBlock(w) + `<div class="sum muted">${esc((w.description || "").slice(0, 160))}…</div>` : `<div class="sum">${esc((w.description || "").slice(0, 260))}${(w.description || "").length > 260 ? "…" : ""}</div>${w.ai_reason ? `<div class="act">→ ${esc(w.ai_reason)}</div>` : ""}`}
+      <div class="ft"><span>${epssHtml(w)}</span><span class="mono">${w._batch ? "release batch" : esc(w.matched_vendor)} · ${fmtDT(w.published_at)}</span></div>
+    </article>`).join("") : `<div class="empty">No CVEs match. (TI 04 populates this table.)</div>`;
   t.tBodies[0].innerHTML = rows.length ? rows.map(w => `
     <tr>
       <td class="mono">${w._batch ? `<span class="t">${esc(w._label)}</span> <span class="pill muted">×${w._n}</span>` : `<a href="${cveUrl(w.cve_id)}" target="_blank" rel="noopener">${esc(w.cve_id)}</a>`}${isNew(w.published_at) ? ` <span class="pill new">new</span>` : ""}</td>
       <td>${sevHtml(w)}</td><td>${epssHtml(w)}</td>
       <td><div class="t">${esc(w.product_group || "Other")}</div><div class="s">${w._batch ? "release batch" : esc(w.matched_vendor)}</div></td>
-      <td>${w.ai_summary ? `<div class="ai">${esc(w.ai_summary)}${w.ai_reason ? `<div class="act">→ ${esc(w.ai_reason)}</div>` : ""}</div><div class="s">${esc((w.description || "").slice(0, 140))}…</div>` : `${esc((w.description || "").slice(0, 220))}${(w.description || "").length > 220 ? "…" : ""}${w.ai_reason ? `<div class="act">→ ${esc(w.ai_reason)}</div>` : ""}`}</td>
+      <td>${w.ai_summary ? aiBlock(w) + `<div class="s">${esc((w.description || "").slice(0, 140))}…</div>` : `${esc((w.description || "").slice(0, 220))}${(w.description || "").length > 220 ? "…" : ""}${w.ai_reason ? `<div class="act">→ ${esc(w.ai_reason)}</div>` : ""}`}</td>
       <td class="mono">${fmtDT(w.published_at)}</td>
       <td>${w.in_kev ? `<span class="pill kev">in KEV</span>` : `<span class="pill muted">watch</span>`}</td></tr>`).join("")
     : `<tr><td colspan="7" class="empty">No CVEs match. (TI 04 populates this table.)</td></tr>`;
 }
+// ----- Articles
+const keptPill = (a) => artKept(a) ? `<span class="pill ok">kept</span>` : a.relevant ? `<span class="pill muted" title="Keyword score kept it; Claude judged it not relevant to our clients">AI: skip</span>` : `<span class="pill muted">dropped</span>`;
 function renderArts(rows) {
   const t = $("#arts"); markSorted(t); rows = sortRows(rows, t);
   $("#artCount").textContent = `${rows.length} shown`;
+  showView("arts", "artsGrid", "artsTable");
+  $("#artsGrid").innerHTML = rows.length ? rows.map(a => `<article class="g">
+      <div class="top"><span class="grp">${esc(a.source)}</span>${keptPill(a)}<span class="pill muted">score ${esc(a.score)}</span>${isNew(a.published_at) ? `<span class="pill new">new</span>` : ""}<span class="spacer"></span><span class="grp">${esc(a.product_group || (a.relevant ? "General" : "–"))}</span></div>
+      <div class="ttl"><a href="${safeUrl(a.link)}" target="_blank" rel="noopener">${esc(a.title)}</a></div>
+      ${a.ai_summary ? aiBlock(a) : `<div class="sum">${esc(clip(a.summary || "", 220))}</div>`}
+      <div class="chips">${(a.matched_terms || []).slice(0, 8).map(k => `<span class="kw ${SIGNALS.has(k) ? "sig" : ""}">${esc(k)}</span>`).join("")}</div>
+      <div class="ft"><span class="mono">${fmtDT(a.published_at)}</span></div>
+    </article>`).join("") : `<div class="empty">No articles match.</div>`;
   t.tBodies[0].innerHTML = rows.length ? rows.map(a => `
     <tr>
-      <td class="mono"><span class="t">${a.score}</span> ${a.relevant && a.ai_verdict !== false ? `<span class="pill ok">kept</span>` : a.relevant ? `<span class="pill muted" title="Keyword score kept it; Claude judged it not relevant to our clients">AI: skip</span>` : `<span class="pill muted">dropped</span>`}</td>
-      <td><div class="t"><a href="${safeUrl(a.link)}" target="_blank" rel="noopener">${esc(a.title)}</a>${isNew(a.published_at) ? ` <span class="pill new">new</span>` : ""}</div>${a.ai_summary ? `<div class="ai">${esc(a.ai_summary)}${a.ai_reason ? `<div class="act">→ ${esc(a.ai_reason)}</div>` : ""}</div>` : `<div class="s">${esc((a.summary || "").slice(0, 180))}</div>`}</td>
+      <td class="mono"><span class="t">${a.score}</span> ${keptPill(a)}</td>
+      <td><div class="t"><a href="${safeUrl(a.link)}" target="_blank" rel="noopener">${esc(a.title)}</a>${isNew(a.published_at) ? ` <span class="pill new">new</span>` : ""}</div>${a.ai_summary ? aiBlock(a) : `<div class="s">${esc((a.summary || "").slice(0, 180))}</div>`}</td>
       <td><div class="t">${esc(a.product_group || (a.relevant ? "General" : "–"))}</div><div class="s">${esc(a.source)}</div></td>
       <td><div class="chips">${(a.matched_terms || []).map(k => `<span class="kw ${SIGNALS.has(k) ? "sig" : ""}">${esc(k)}</span>`).join("") || `<span class="s">no matches</span>`}</div>${a.ai_reason ? `<div class="s">AI: ${esc(a.ai_reason)}</div>` : ""}</td>
       <td class="mono">${fmtDT(a.published_at)}</td></tr>`).join("")
@@ -487,13 +676,22 @@ function renderArts(rows) {
 }
 
 // ----- wiring
-$$(".tab").forEach(b => b.addEventListener("click", () => { state.tab = b.dataset.tab; $$(".tab").forEach(x => x.setAttribute("aria-selected", x === b)); buildChips(); render(); try { localStorage.setItem("tiw.tab", state.tab); } catch {} }));
+$$(".tab").forEach(b => b.addEventListener("click", () => { state.tab = b.dataset.tab; $$(".tab").forEach(x => x.setAttribute("aria-selected", x === b)); buildFilters(); render(); try { localStorage.setItem("tiw.tab", state.tab); } catch {} }));
 $("#q").addEventListener("input", e => { state.q = e.target.value.trim().toLowerCase(); render(); });
-$("#win").addEventListener("change", e => { state.days = Number(e.target.value); buildChips(); render(); });
+$$("#winSeg button").forEach(b => b.addEventListener("click", () => { setWindow(Number(b.dataset.days)); buildFilters(); render(); }));
+$("#dFrom").addEventListener("change", setCustomRange); $("#dTo").addEventListener("change", setCustomRange);
+$$(".seg.view").forEach(seg => seg.querySelectorAll("button").forEach(b => b.addEventListener("click", () => { state.view[seg.dataset.for] = b.dataset.view; seg.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x === b)); render(); try { localStorage.setItem("tiw.view", JSON.stringify(state.view)); } catch {} })));
 $("#refresh").addEventListener("click", load);
 $$("th[data-k]").forEach(th => th.addEventListener("click", () => { const t = th.closest("table"); if (t.dataset.sort === th.dataset.k) t.dataset.dir = t.dataset.dir === "asc" ? "desc" : "asc"; else { t.dataset.sort = th.dataset.k; t.dataset.dir = "desc"; } render(); }));
 $("#theme").addEventListener("click", () => { const r = document.documentElement; const cur = r.dataset.theme || (matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark"); r.dataset.theme = cur === "dark" ? "light" : "dark"; try { localStorage.setItem("tiw.theme", r.dataset.theme); } catch {} render(); });
-try { const t = localStorage.getItem("tiw.theme"); if (t) document.documentElement.dataset.theme = t; const tab = localStorage.getItem("tiw.tab"); if (tab && $(`.tab[data-tab="${tab}"]`)) { state.tab = tab; $$(".tab").forEach(x => x.setAttribute("aria-selected", x.dataset.tab === tab)); } } catch {}
+document.addEventListener("click", e => { if (!e.target.closest("details.dd")) $$("details.dd[open]").forEach(d => d.open = false); });
+document.addEventListener("keydown", e => { if (e.key === "Escape") $$("details.dd[open]").forEach(d => d.open = false); });
+try {
+  const t = localStorage.getItem("tiw.theme"); if (t) document.documentElement.dataset.theme = t;
+  const tab = localStorage.getItem("tiw.tab"); if (tab && $(`.tab[data-tab="${tab}"]`)) { state.tab = tab; $$(".tab").forEach(x => x.setAttribute("aria-selected", x.dataset.tab === tab)); }
+  const v = JSON.parse(localStorage.getItem("tiw.view") || "null"); if (v) { Object.assign(state.view, v); $$(".seg.view").forEach(seg => seg.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", b.dataset.view === state.view[seg.dataset.for]))); }
+} catch {}
+setWindow(30);
 load();
 </script>
 </body>
