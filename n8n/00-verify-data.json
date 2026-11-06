@@ -1,0 +1,530 @@
+{
+  "name": "TI 00 \u2013 Verify Data",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "2550c953-8822-4258-b148-17c0dd478ffa",
+      "name": "Run",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -220,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// ====== DEMO CONFIG \u2013 move secrets to n8n Credentials before production ======\nconst PRODUCT_GROUPS = {\n  // group name           : terms matched (case-insensitive) in KEV vendor/product, NVD CPE/description, article text\n  \"Microsoft\":            [\"Microsoft\",\"Windows\",\"Exchange\",\"SharePoint\",\"Office\",\"Entra\",\"Azure\",\"Intune\",\"Hyper-V\",\"SQL Server\",\"Teams\",\"OneDrive\",\"Outlook\",\"Defender\"],\n  \"Fortinet\":             [\"Fortinet\",\"FortiGate\",\"FortiOS\",\"FortiManager\",\"FortiAnalyzer\",\"FortiClient\"],\n  \"ConnectWise\":          [\"ConnectWise\",\"ScreenConnect\"],\n  \"NinjaOne\":             [\"NinjaOne\",\"Ninja RMM\"],\n  \"Cisco\":                [\"Cisco\"],\n  \"Ivanti\":               [\"Ivanti\"],\n  \"Citrix\":               [\"Citrix\",\"NetScaler\"],\n  \"VMware\":               [\"VMware\",\"Broadcom\"],\n  \"Veeam\":                [\"Veeam\"],\n  \"SonicWall\":            [\"SonicWall\"],\n  \"Palo Alto\":            [\"Palo Alto\",\"PAN-OS\",\"GlobalProtect\"],\n  \"Apple\":                [\"Apple\",\"iOS\",\"macOS\"],\n  \"Google / Chrome\":      [\"Google\",\"Chrome\",\"Chromium\"],\n  \"Mozilla\":              [\"Mozilla\",\"Firefox\"],\n  \"Adobe\":                [\"Adobe\",\"Acrobat\"],\n  \"Atlassian\":            [\"Atlassian\",\"Confluence\",\"Jira\"],\n  \"Oracle\":               [\"Oracle\"],\n  \"SolarWinds\":           [\"SolarWinds\"],\n  \"ManageEngine\":         [\"Zoho\",\"ManageEngine\"],\n  \"NAS\":                  [\"Synology\",\"QNAP\"],\n  \"Ubiquiti\":             [\"Ubiquiti\",\"UniFi\"],\n  \"Hardware OEM\":         [\"Dell\",\"Lenovo\"],\n  \"Progress / MOVEit\":    [\"Progress\",\"MOVEit\"],\n  \"DevOps\":               [\"GitLab\",\"Jenkins\"],\n  \"Linux / OSS\":          [\"OpenSSL\",\"Linux\",\"Ubuntu\",\"Samba\"],\n  \"PaperCut\":             [\"PaperCut\"],\n  \"Kaseya\":               [\"Kaseya\"],\n  \"Security tools\":       [\"CrowdStrike\",\"Proofpoint\",\"ThreatLocker\",\"Auvik\"],\n  \"Archivers\":            [\"7-Zip\",\"WinRAR\"],\n  \"Proxmox\":              [\"Proxmox\"],\n};\nreturn [{\n  json: {\n    SUPABASE_URL: \"https://YOUR-PROJECT.supabase.co\",\n    SUPABASE_SERVICE_KEY: \"YOUR-SERVICE-ROLE-KEY\",      // server-side only, never in the dashboard\n    TEAMS_WEBHOOK: \"https://YOUR-TENANT.webhook.office.com/webhookb2/....\",\n    DASHBOARD_URL: \"https://your-dashboard-url/\",      // linked at the bottom of every email/card\n    EMAIL_TO: \"you@example.com\",                       // comma-separated list for the team digest\n    EMAIL_FROM: \"Threat Intel <you@gmail.com>\",        // must match the SMTP credential account\n\n    PRODUCT_GROUPS,\n    VENDOR_ALLOWLIST: Object.values(PRODUCT_GROUPS).flat(),\n\n    // High-signal phrases for news scoring (weight added to score)\n    SIGNAL_TERMS: {\n      \"zero-day\": 3, \"0-day\": 3, \"actively exploited\": 3, \"in the wild\": 3,\n      \"exploited\": 2, \"ransomware\": 2, \"critical\": 1, \"rce\": 2, \"remote code execution\": 2,\n      \"authentication bypass\": 2, \"patch now\": 2, \"emergency\": 2, \"out-of-band\": 2,\n      \"cve-\": 1, \"australia\": 2, \"australian\": 2, \"msp\": 2, \"mssp\": 2, \"rmm\": 2,\n      \"supply chain\": 1, \"phishing\": 1, \"data breach\": 1\n    },\n    MIN_SCORE: 3,                 // article is \"relevant\" at or above this\n    NEWS_MAX_AGE_DAYS: 7,         // ignore feed items older than this (MSRC feed returns its whole history)\n    KEV_LOOKBACK_DAYS: 14,        // on first run, only notify about KEV entries this recent\n\n    // CVE Watch / enrichment (TI 04, TI 05)\n    NVD_API_KEY: \"YOUR-NVD-API-KEY\",   // https://nvd.nist.gov/developers/request-an-api-key\n    CVSS_MIN: 7.0,                     // CVE Watch keeps CVEs at or above this base score\n    CVE_LOOKBACK_HOURS: 48,            // NVD publication window per run\n    ENRICH_BATCH: 60,                  // KEV rows enriched per TI 05 run\n\n    // AI summaries (Claude). Credential \"Anthropic account\" is selected on the Claude nodes.\n    AI_ENABLED: true,\n    AI_MODEL: \"claude-haiku-5-5\",\n    AI_MAX_PER_RUN: 25,\n    AI_CONTEXT: \"We are an Australian MSSP running Microsoft 365/Defender XDR/Sentinel/Entra, Fortinet (FortiGate/FortiManager/FortiAnalyzer), ConnectWise and NinjaOne RMM, CrowdStrike Falcon, Proofpoint, ThreatLocker, Nessus and Auvik across ~50 SMB client tenants.\"\n  }\n}];",
+        "mode": "runOnceForAllItems"
+      },
+      "id": "596757cd-90c8-45de-95fa-32f8849a0c83",
+      "name": "Config",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        0,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "07ed1dc4-ae2d-4093-9aa9-9eeb2a05a130",
+      "name": "Fetch CISA KEV",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        220,
+        100
+      ],
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $('Config').first().json.SUPABASE_URL }}/rest/v1/kev_entries?select=cve_id,vendor,product,vuln_name,date_added,due_date,ransomware,cvss_score,epss_score,enriched_at,ai_summary&order=enriched_at.desc.nullslast,date_added.desc&limit=1500",
+        "options": {
+          "timeout": 60000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $('Config').first().json.SUPABASE_SERVICE_KEY }}"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Config').first().json.SUPABASE_SERVICE_KEY }}"
+            }
+          ]
+        }
+      },
+      "id": "e2a55ada-52e9-462a-a1ac-d093e8209566",
+      "name": "DB kev_entries",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        440,
+        100
+      ],
+      "executeOnce": true,
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $('Config').first().json.SUPABASE_URL }}/rest/v1/cve_watch?select=cve_id,cvss_score,epss_score,published_at&order=published_at.desc&limit=100",
+        "options": {
+          "timeout": 60000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $('Config').first().json.SUPABASE_SERVICE_KEY }}"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Config').first().json.SUPABASE_SERVICE_KEY }}"
+            }
+          ]
+        }
+      },
+      "id": "959cb086-1a15-497a-9ee7-66fbcd06f65b",
+      "name": "DB cve_watch",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        660,
+        100
+      ],
+      "executeOnce": true,
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const cfg = $('Config').first().json;\nconst cat = $('Fetch CISA KEV').first().json;\nconst db = $('DB kev_entries').all().map(i => i.json).filter(r => r && r.cve_id);\nconst watch = $('DB cve_watch').all().map(i => i.json).filter(r => r && r.cve_id);\nconst allow = cfg.VENDOR_ALLOWLIST.map(s => s.toLowerCase());\nconst byId = new Map((cat.vulnerabilities || []).map(v => [v.cveID, v]));\nconst inScope = (cat.vulnerabilities || []).filter(v => allow.some(a => `${v.vendorProject} ${v.product}`.toLowerCase().includes(a)));\nconst dbIds = new Set(db.map(r => r.cve_id));\nconst since = new Date(Date.now() - cfg.KEV_LOOKBACK_DAYS * 864e5).toISOString().slice(0, 10);\nconst missing = inScope.filter(v => v.dateAdded >= since && !dbIds.has(v.cveID)).map(v => v.cveID);\nconst notInCatalog = db.filter(r => !byId.has(r.cve_id)).map(r => r.cve_id);\nconst mismatches = [];\nfor (const r of db) {\n  const v = byId.get(r.cve_id); if (!v) continue;\n  const diff = [];\n  if (v.vendorProject !== r.vendor) diff.push(`vendor ${r.vendor} vs ${v.vendorProject}`);\n  if (v.product !== r.product) diff.push(`product ${r.product} vs ${v.product}`);\n  if (v.dateAdded !== r.date_added) diff.push(`date_added ${r.date_added} vs ${v.dateAdded}`);\n  if (v.dueDate !== r.due_date) diff.push(`due_date ${r.due_date} vs ${v.dueDate}`);\n  if ((v.knownRansomwareCampaignUse || 'Unknown') !== r.ransomware) diff.push(`ransomware ${r.ransomware} vs ${v.knownRansomwareCampaignUse}`);\n  if (diff.length) mismatches.push(`${r.cve_id}: ${diff.join('; ')}`);\n}\nconst enriched = db.filter(r => r.cvss_score != null);\nconst ai = db.filter(r => r.ai_summary);\nconst aiWeak = ai.filter(r => { const t = `${r.vendor} ${r.product} ${r.vuln_name || ''}`.toLowerCase().split(/[^a-z0-9]+/).filter(w => w.length > 3); return !t.some(w => r.ai_summary.toLowerCase().includes(w)); }).map(r => r.cve_id);\n// sample for NVD / EPSS re-check: 12 most recent enriched KEV + 8 most recent watch\nconst pick = (arr, n) => arr.slice(0, n);\nconst sample = [...pick(enriched, 12).map(r => ({ cve_id: r.cve_id, src: 'kev', cvss: r.cvss_score, epss: r.epss_score })),\n                ...pick(watch.filter(w => w.cvss_score != null), 8).map(r => ({ cve_id: r.cve_id, src: 'watch', cvss: r.cvss_score, epss: r.epss_score }))];\nconst report = {\n  checked_at: new Date().toISOString(), catalog_version: cat.catalogVersion, catalog_total: cat.count, catalog_in_scope: inScope.length,\n  db_rows: db.length, db_enriched: enriched.length, db_with_ai: ai.length,\n  missing_recent_in_scope: missing, rows_not_in_catalog: notInCatalog, field_mismatches: mismatches.slice(0, 50), field_mismatch_count: mismatches.length,\n  ai_summary_not_mentioning_product: aiWeak.slice(0, 20), ai_weak_count: aiWeak.length, sample };\nreturn [{ json: report }];",
+        "mode": "runOnceForAllItems"
+      },
+      "id": "721b9ebb-d304-420c-99ae-bfb73df1a40f",
+      "name": "Compare KEV",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.first().json.sample.map(s => ({ json: s }));",
+        "mode": "runOnceForAllItems"
+      },
+      "id": "c51f38f0-7d76-486f-9dd9-c1caddbf5cfb",
+      "name": "Sample items",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        100
+      ],
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://services.nvd.nist.gov/rest/json/cves/2.0?cveId={{ $json.cve_id }}",
+        "options": {
+          "timeout": 60000,
+          "batching": {
+            "batch": {
+              "batchSize": 1,
+              "batchInterval": 700
+            }
+          }
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apiKey",
+              "value": "={{ $('Config').first().json.NVD_API_KEY }}"
+            }
+          ]
+        }
+      },
+      "id": "43a41fb4-cb19-4f63-b371-c9710fb3d0e2",
+      "name": "NVD lookup",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1320,
+        100
+      ],
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const sample = $('Compare KEV').first().json.sample;\nconst nvd = $('NVD lookup').all().map(i => i.json);\nconst pickCvss = (m) => { for (const k of ['cvssMetricV40','cvssMetricV31','cvssMetricV30','cvssMetricV2']) { const a = m?.[k]; if (Array.isArray(a) && a.length) { const p = a.find(x => x.type === 'Primary') || a[0]; return p.cvssData?.baseScore; } } return null; };\nconst rows = sample.map((s, i) => { const v = nvd[i]?.vulnerabilities?.[0]?.cve; const live = v ? pickCvss(v.metrics) : null; return { ...s, nvd_cvss: live, nvd_ok: v ? (live === s.cvss) : null, nvd_err: nvd[i]?.error ? String(nvd[i].error.message || nvd[i].error).slice(0, 80) : (v ? null : 'no result') }; });\nreturn [{ json: { rows, cves: sample.map(s => s.cve_id).join(',') } }];",
+        "mode": "runOnceForAllItems"
+      },
+      "id": "850bb4ef-bb4d-49ed-b4d3-72041237cb86",
+      "name": "Compare NVD",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1540,
+        100
+      ],
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://api.first.org/data/v1/epss?cve={{ $json.cves }}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "b465ef66-8b70-4c2d-a934-4e5b46e78345",
+      "name": "Fetch EPSS",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1760,
+        100
+      ],
+      "onError": "continueRegularOutput",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const prev = $('Compare NVD').first().json.rows;\nconst e = $input.first().json; const map = new Map((e.data || []).map(d => [d.cve, Number(d.epss)]));\nconst rows = prev.map(r => { const live = map.has(r.cve_id) ? map.get(r.cve_id) : null; return { ...r, epss_live: live, epss_ok: live == null || r.epss == null ? null : Math.abs(live - Number(r.epss)) <= 0.05 }; });\nreturn [{ json: { rows } }];",
+        "mode": "runOnceForAllItems"
+      },
+      "id": "7a4c30ab-678d-412d-8dc1-15bc796323c1",
+      "name": "Compare EPSS",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1980,
+        100
+      ],
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $('Config').first().json.SUPABASE_URL }}/rest/v1/articles?select=link,title,source&relevant=eq.true&ai_verdict=not.is.false&order=published_at.desc&limit=20",
+        "options": {
+          "timeout": 60000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $('Config').first().json.SUPABASE_SERVICE_KEY }}"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Config').first().json.SUPABASE_SERVICE_KEY }}"
+            }
+          ]
+        }
+      },
+      "id": "91d6c69b-6055-43d6-9ffa-12d671861839",
+      "name": "DB articles",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2200,
+        100
+      ],
+      "executeOnce": true,
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.all().map(i => i.json).filter(a => a && a.link).slice(0, 20).map(a => ({ json: { link: a.link, title: a.title, source: a.source } }));",
+        "mode": "runOnceForAllItems"
+      },
+      "id": "39538831-4227-4a9a-bf22-244cdcab17d2",
+      "name": "Article items",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2420,
+        100
+      ],
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $json.link }}",
+        "options": {
+          "timeout": 20000,
+          "redirect": {
+            "redirect": {
+              "followRedirects": true
+            }
+          },
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "text"
+            }
+          },
+          "batching": {
+            "batch": {
+              "batchSize": 2,
+              "batchInterval": 500
+            }
+          }
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "User-Agent",
+              "value": "Mozilla/5.0 (threat-intel-pipeline link check)"
+            }
+          ]
+        }
+      },
+      "id": "992907b9-ba98-4b7a-8f69-b5be078a9a79",
+      "name": "Check article links",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2640,
+        100
+      ],
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const k = $('Compare KEV').first().json;\nconst rows = $('Compare EPSS').first().json.rows;\nconst arts = $('Article items').all().map(i => i.json);\nconst checks = $('Check article links').all().map(i => i.json);\nconst links = arts.map((a, i) => { const c = checks[i] || {}; const st = c.statusCode ?? (c.error ? 'ERR' : null); return { source: a.source, title: String(a.title).slice(0, 70), status: st, ok: typeof st === 'number' && st < 400 }; });\nconst L = [];\nL.push(`Threat-intel data verification \u2013 ${k.checked_at.slice(0, 16).replace('T', ' ')} UTC`);\nL.push('');\nL.push(`A. CISA KEV catalog (version ${k.catalog_version}, ${k.catalog_total} entries, ${k.catalog_in_scope} in our product scope)`);\nL.push(`   Stored rows: ${k.db_rows}. Enriched with CVSS: ${k.db_enriched}. With AI summary: ${k.db_with_ai}.`);\nL.push(`   Recent in-scope KEV entries missing from our DB: ${k.missing_recent_in_scope.length}${k.missing_recent_in_scope.length ? ' -> ' + k.missing_recent_in_scope.join(', ') : ' (none)'}`);\nL.push(`   Stored rows no longer in catalog: ${k.rows_not_in_catalog.length}${k.rows_not_in_catalog.length ? ' -> ' + k.rows_not_in_catalog.slice(0, 10).join(', ') : ' (none)'}`);\nL.push(`   Field mismatches vendor/product/dates/ransomware: ${k.field_mismatch_count}`); for (const m of k.field_mismatches.slice(0, 10)) L.push(`     - ${m}`);\nL.push('');\nL.push(`B. CVSS re-check against live NVD (${rows.length} sampled: 12 KEV + 8 CVE Watch)`);\nfor (const r of rows) L.push(`   - ${r.cve_id} [${r.src}] stored ${r.cvss} / NVD ${r.nvd_cvss ?? 'n/a'} -> ${r.nvd_ok === null ? (r.nvd_err || 'n/a') : r.nvd_ok ? 'OK' : 'MISMATCH'}`);\nL.push(`   Result: ${rows.filter(r => r.nvd_ok === true).length} match, ${rows.filter(r => r.nvd_ok === false).length} mismatch, ${rows.filter(r => r.nvd_ok === null).length} not comparable`);\nL.push('');\nL.push(`C. EPSS re-check against FIRST (tolerance 0.05; EPSS is recomputed daily so small drift is normal)`);\nL.push(`   ${rows.filter(r => r.epss_ok === true).length} within tolerance, ${rows.filter(r => r.epss_ok === false).length} drifted more, ${rows.filter(r => r.epss_ok === null).length} not comparable`);\nfor (const r of rows.filter(r => r.epss_ok === false)) L.push(`     - ${r.cve_id} stored ${r.epss} / live ${r.epss_live}`);\nL.push('');\nL.push(`D. Article links (${links.length} most recent relevant articles, HTTP status)`);\nfor (const l of links) L.push(`   - ${l.ok ? 'OK ' : 'FAIL'} ${l.status} | ${l.source} | ${l.title}`);\nL.push('');\nL.push(`E. AI summary sanity (KEV): ${k.ai_weak_count} of ${k.db_with_ai} summaries do not mention the vendor/product/title words${k.ai_weak_count ? ' -> ' + k.ai_summary_not_mentioning_product.join(', ') : ''}`);\nL.push('');\nconst fails = k.missing_recent_in_scope.length + k.field_mismatch_count + rows.filter(r => r.nvd_ok === false).length + links.filter(l => !l.ok).length;\nL.push(fails ? `RESULT: ${fails} item(s) need a look (see above).` : 'RESULT: all checks passed.');\nconst note = L.join('\\n');\nreturn [{ json: { note, subject: `[Threat Intel] Data verification \u2013 ${fails ? fails + ' issue(s)' : 'all checks passed'}`, fails } }];",
+        "mode": "runOnceForAllItems"
+      },
+      "id": "70e6d1e6-3729-44f2-be38-2905c4e2cf3b",
+      "name": "Report",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2860,
+        100
+      ],
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $('Config').first().json.EMAIL_FROM }}",
+        "toEmail": "={{ $('Config').first().json.EMAIL_TO }}",
+        "subject": "={{ $json.subject }}",
+        "emailFormat": "text",
+        "text": "={{ $json.note }}",
+        "options": {}
+      },
+      "id": "dceb8b7a-9af7-4be7-a6ea-741d4b9df457",
+      "name": "Send email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        3080,
+        100
+      ],
+      "credentials": {
+        "smtp": {
+          "id": "",
+          "name": "SMTP account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Run": {
+      "main": [
+        [
+          {
+            "node": "Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config": {
+      "main": [
+        [
+          {
+            "node": "Fetch CISA KEV",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch CISA KEV": {
+      "main": [
+        [
+          {
+            "node": "DB kev_entries",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DB kev_entries": {
+      "main": [
+        [
+          {
+            "node": "DB cve_watch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DB cve_watch": {
+      "main": [
+        [
+          {
+            "node": "Compare KEV",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compare KEV": {
+      "main": [
+        [
+          {
+            "node": "Sample items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sample items": {
+      "main": [
+        [
+          {
+            "node": "NVD lookup",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "NVD lookup": {
+      "main": [
+        [
+          {
+            "node": "Compare NVD",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compare NVD": {
+      "main": [
+        [
+          {
+            "node": "Fetch EPSS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch EPSS": {
+      "main": [
+        [
+          {
+            "node": "Compare EPSS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compare EPSS": {
+      "main": [
+        [
+          {
+            "node": "DB articles",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DB articles": {
+      "main": [
+        [
+          {
+            "node": "Article items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Article items": {
+      "main": [
+        [
+          {
+            "node": "Check article links",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check article links": {
+      "main": [
+        [
+          {
+            "node": "Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Report": {
+      "main": [
+        [
+          {
+            "node": "Send email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "meta": {
+    "instanceId": "threat-intel-demo"
+  }
+}

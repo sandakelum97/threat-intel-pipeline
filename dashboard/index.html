@@ -6,7 +6,7 @@
 <title>Threat Intel Watch</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js" integrity="sha384-dug+JxfBvklEQdJ4AYuBBAIScUz0bVN73xpy273gcAwHjb3qI0fXmuYNaNfdyYJG" crossorigin="anonymous"></script>
 <style>
 /* Layout: SOC-style dark console — header with run status, tab bar, KPI strip, chart row, filter chips, dense table. Light theme kept. */
 :root {
@@ -151,6 +151,7 @@ footer { color: var(--muted); font-size: 12px; margin-top: 24px; }
   <button class="tab" role="tab" data-tab="kev">KEV <span class="n" id="nKev">0</span></button>
   <button class="tab" role="tab" data-tab="watch">CVE Watch <span class="n" id="nWatch">0</span></button>
   <button class="tab" role="tab" data-tab="articles">Articles <span class="n" id="nArt">0</span></button>
+  <button class="tab" role="tab" data-tab="note">Ticket note</button>
 </div>
 
 <div class="bar">
@@ -197,6 +198,12 @@ footer { color: var(--muted); font-size: 12px; margin-top: 24px; }
     <tbody></tbody></table></div>
 </section>
 
+<section id="tab-note" hidden>
+  <div class="sect-head"><h2>Daily ticket note</h2><span class="count" id="noteMeta"></span><span><button class="btn" id="copyNote" type="button">Copy note</button></span></div>
+  <p class="muted" id="noteHelp">Plain-text summary of the last 24 h (new KEV entries, new high-severity CVEs in our stack, relevant news). Generated each weekday at 07:00 by TI 07 and emailed; paste it into the ticket note as normal text.</p>
+  <pre id="noteBody" style="white-space:pre-wrap;font-family:inherit;font-size:13px;line-height:1.5;border:1px solid var(--line);border-radius:8px;padding:14px;max-height:70vh;overflow:auto"></pre>
+</section>
+
 <footer>Summaries by Claude (Haiku). Sources: CISA KEV · NVD · FIRST EPSS · CISA advisories · ASD ACSC · MSRC · Fortinet PSIRT · BleepingComputer · The Hacker News · AskWoody. Pipeline: n8n → Supabase → email / Teams.</footer>
 </div>
 
@@ -211,6 +218,7 @@ const DAY = 86400000;
 const now = () => Date.now();
 const iso = (d) => new Date(d).toISOString();
 const SAMPLE = {
+  notes: [{ note_date: iso(now()).slice(0,10), counts: { kev: 1, watch: 1, articles: 1 }, note: "Threat intel daily note – sample (last 24 h)\nSources: CISA KEV, NVD, FIRST EPSS, vendor PSIRTs, ACSC/CISA advisories, security news.\n\n1. NEW CONFIRMED-EXPLOITED VULNERABILITIES (CISA KEV) – 1\n   - CVE-2026-20951 | Fortinet – Fortinet FortiOS | CRITICAL 9.8 | EPSS 91% | ransomware use: Known\n     An unauthenticated attacker can run code on the firewall via SSL-VPN.\n     Action: Patch every client FortiGate exposing SSL-VPN today.\n\n2. NEW HIGH-SEVERITY CVEs IN OUR STACK – 1\n   - CVE-2026-30011 | Veeam | HIGH 8.8 | EPSS 1%\n     Action: Update Veeam Backup & Replication.\n\n3. RELEVANT NEWS AND ADVISORIES – 1\n   - [General] ACSC alert: ransomware targeting MSPs (ASD ACSC)\n     Why it matters: Check MFA on all RMM admin accounts.\n" }],
   kev: [
     {cve_id:"CVE-2026-20951",vendor:"Fortinet",product:"FortiOS, FortiProxy",vuln_name:"FortiOS SSL-VPN out-of-bounds write",date_added:iso(now()-1*DAY).slice(0,10),due_date:iso(now()+20*DAY).slice(0,10),ransomware:"Known",matched_vendor:"fortinet",product_group:"Fortinet",cvss_score:9.8,cvss_severity:"CRITICAL",epss_score:0.912,epss_percentile:0.998,ai_summary:"An unauthenticated attacker on the internet can send a crafted request to the SSL-VPN and run code on the firewall itself. Exploitation is confirmed and tied to ransomware crews.",ai_reason:"Patch every client FortiGate exposing SSL-VPN today; if you can't, disable SSL-VPN until patched."},
     {cve_id:"CVE-2026-19844",vendor:"Microsoft",product:"Windows",vuln_name:"Windows CLFS driver privilege escalation",date_added:iso(now()-1*DAY).slice(0,10),due_date:iso(now()+13*DAY).slice(0,10),ransomware:"Unknown",matched_vendor:"microsoft",product_group:"Microsoft",cvss_score:7.8,cvss_severity:"HIGH",epss_score:0.21,epss_percentile:0.96,ai_summary:"A local attacker with a foothold can abuse the CLFS log driver to become SYSTEM. It's a post-exploitation step, commonly chained after phishing.",ai_reason:"Deploy this month's Windows cumulative update via RMM; prioritise servers and admin workstations."},
@@ -242,12 +250,14 @@ const SAMPLE = {
   ]
 };
 
-let data = { kev: [], watch: [], articles: [], runs: [] };
+let data = { kev: [], watch: [], articles: [], runs: [], notes: [] };
 const state = { tab: "overview", q: "", days: 30, chips: { sev: new Set(), vendor: new Set(), source: new Set(), flags: new Set(["relevant"]) } };
 const charts = {};
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
-const esc = (s) => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const safeUrl = (u) => /^https?:\/\/[^\s"'<>]+$/i.test(String(u || "")) ? esc(u) : "#";
+const cveUrl = (id) => /^CVE-\d{4}-\d{4,}$/i.test(String(id || "")) ? "https://nvd.nist.gov/vuln/detail/" + String(id).toUpperCase() : "#";
 const fmtD = (s) => s ? new Date(s).toLocaleDateString("en-AU", {day:"2-digit", month:"short"}) : "–";
 const fmtDT = (s) => s ? new Date(s).toLocaleString("en-AU", {day:"2-digit", month:"short", hour:"2-digit", minute:"2-digit"}) : "–";
 const ago = (s) => { if (!s) return "never"; const m = Math.round((now() - new Date(s)) / 60000); return m < 60 ? `${m} min ago` : m < 1440 ? `${Math.round(m/60)} h ago` : `${Math.round(m/1440)} d ago`; };
@@ -272,13 +282,14 @@ async function load() {
   try {
     if (live) {
       const since = new Date(now() - 90 * DAY).toISOString();
-      const [kev, watch, articles, runs] = await Promise.all([
+      const [kev, watch, articles, runs, notes] = await Promise.all([
         sb(`kev_entries?order=date_added.desc&limit=1000`),
         sb(`cve_watch?order=published_at.desc&limit=500`).catch(() => []),
         sb(`articles?published_at=gte.${since}&order=score.desc,published_at.desc&limit=1000`),
         sb(`digest_log?order=sent_at.desc&limit=50`).catch(() => []),
+        sb(`ticket_notes?order=note_date.desc&limit=7`).catch(() => []),
       ]);
-      data = { kev, watch, articles, runs };
+      data = { kev, watch, articles, runs, notes };
     } else data = SAMPLE;
   } catch (e) {
     $("#runs").textContent = `load failed: ${e.message}`;
@@ -314,7 +325,7 @@ function watchRows() { const kevIds = new Set(data.kev.map(k => k.cve_id)); retu
   && (!state.chips.sev.size || state.chips.sev.has(sevOf(w) || "NA")) && (!state.chips.vendor.size || state.chips.vendor.has(w.product_group || "Other"))
   && (!state.chips.flags.has("notkev") || !w.in_kev) && (!state.chips.flags.has("new") || isNew(w.published_at)))); }
 function artRows() { return data.articles.filter(a => inWindow(tsOf(a, "published_at")) && hit(`${a.title} ${a.summary} ${(a.matched_terms||[]).join(" ")}`)
-  && (!state.chips.source.size || state.chips.source.has(a.source)) && (!state.chips.vendor.size || state.chips.vendor.has(a.product_group || "General")) && (!state.chips.flags.has("relevant") || a.relevant) && (!state.chips.flags.has("new") || isNew(a.published_at))); }
+  && (!state.chips.source.size || state.chips.source.has(a.source)) && (!state.chips.vendor.size || state.chips.vendor.has(a.product_group || "General")) && (!state.chips.flags.has("relevant") || (a.relevant && a.ai_verdict !== false)) && (!state.chips.flags.has("new") || isNew(a.published_at))); }
 
 function buildChips() {
   const row = $("#chipsRow"); row.innerHTML = "";
@@ -332,7 +343,7 @@ function buildChips() {
     Object.entries(vc).sort((a, b) => b[1] - a[1]).slice(0, 12).forEach(([v, c]) => add("vendor", v, v, c));
   }
   if (state.tab === "articles") {
-    lbl("Product"); const pc = {}; for (const a of data.articles) if (a.relevant) { const g = a.product_group || "General"; pc[g] = (pc[g] || 0) + 1; }
+    lbl("Product"); const pc = {}; for (const a of data.articles) if (a.relevant && a.ai_verdict !== false) { const g = a.product_group || "General"; pc[g] = (pc[g] || 0) + 1; }
     Object.entries(pc).sort((a, b) => b[1] - a[1]).slice(0, 12).forEach(([v, c]) => add("vendor", v, v, c));
     lbl("Source"); const sc = {}; for (const a of data.articles) sc[a.source] = (sc[a.source] || 0) + 1;
     Object.entries(sc).sort((a, b) => b[1] - a[1]).forEach(([s, c]) => add("source", s, s, c));
@@ -347,11 +358,22 @@ function render() {
   const kev = kevRows(), watch = watchRows(), arts = artRows();
   $("#nKev").textContent = data.kev.filter(k => inWindow(tsOf(k, "date_added"))).length;
   $("#nWatch").textContent = data.watch.filter(w => inWindow(tsOf(w, "published_at"))).length;
-  $("#nArt").textContent = data.articles.filter(a => a.relevant && inWindow(tsOf(a, "published_at"))).length;
+  $("#nArt").textContent = data.articles.filter(a => a.relevant && a.ai_verdict !== false && inWindow(tsOf(a, "published_at"))).length;
   $$("section[id^=tab-]").forEach(s => s.hidden = s.id !== `tab-${state.tab}`);
   if (state.tab === "overview") renderOverview(kev, watch, arts);
-  renderKev(kev); renderWatch(watch); renderArts(arts);
+  renderKev(kev); renderWatch(watch); renderArts(arts); renderNote();
 }
+
+function renderNote() {
+  const notes = Array.isArray(data.notes) ? data.notes : [];
+  const n = notes[0];
+  $("#noteBody").textContent = n ? String(n.note || "") : "No ticket note yet. TI 07 runs weekdays at 07:00 (or run it manually in n8n) and the latest note appears here.";
+  $("#noteMeta").textContent = n ? `${n.note_date} · KEV ${n.counts?.kev ?? 0} · CVEs ${n.counts?.watch ?? 0} · news ${n.counts?.articles ?? 0}` : "";
+  $("#copyNote").disabled = !n;
+}
+$("#copyNote").addEventListener("click", async () => {
+  const b = $("#copyNote"); try { await navigator.clipboard.writeText($("#noteBody").textContent); b.textContent = "Copied"; } catch { b.textContent = "Select and copy manually"; } setTimeout(() => b.textContent = "Copy note", 2000);
+});
 
 function renderOverview(kev, watch, arts) {
   const rw = kev.filter(k => k.ransomware === "Known").length;
@@ -359,7 +381,7 @@ function renderOverview(kev, watch, arts) {
   const newKev = data.kev.filter(k => isNew(k.date_added)).length;
   const newWatch = collapseBatches(data.watch.filter(w => isNew(w.published_at))).length;
   const crit = [...kev, ...watch].filter(r => sevOf(r) === "CRITICAL").length;
-  const relevant = data.articles.filter(a => a.relevant && inWindow(tsOf(a, "published_at"))).length;
+  const relevant = data.articles.filter(a => a.relevant && a.ai_verdict !== false && inWindow(tsOf(a, "published_at"))).length;
   const total = data.articles.filter(a => inWindow(tsOf(a, "published_at"))).length;
   const wl = state.days ? `last ${state.days} d` : "all time";
   $("#strip").innerHTML = [
@@ -379,7 +401,7 @@ function renderOverview(kev, watch, arts) {
   chart("cSev", "doughnut", { labels: sevs.map(s => s.charAt(0) + s.slice(1).toLowerCase()), datasets: [{ data: sevs.map(s => pool.filter(r => sevOf(r) === s).length), backgroundColor: [cssVar("--crit"), cssVar("--high"), cssVar("--med"), cssVar("--low")], borderWidth: 0 }] },
     { cutout: "62%", plugins: { legend: { position: "right" } } });
   // Articles by source
-  const sc = {}; for (const a of data.articles) if (a.relevant && inWindow(tsOf(a, "published_at"))) sc[a.source] = (sc[a.source] || 0) + 1;
+  const sc = {}; for (const a of data.articles) if (a.relevant && a.ai_verdict !== false && inWindow(tsOf(a, "published_at"))) sc[a.source] = (sc[a.source] || 0) + 1;
   const se = Object.entries(sc).sort((a, b) => b[1] - a[1]);
   chart("cSrc", "bar", { labels: se.map(e => e[0]), datasets: [{ data: se.map(e => e[1]), backgroundColor: cssVar("--info"), borderRadius: 3 }] },
     { indexAxis: "y", scales: { x: { beginAtZero: true, ticks: { precision: 0 } } } });
@@ -395,14 +417,14 @@ function renderOverview(kev, watch, arts) {
                  ...watch.filter(w => !w.in_kev).map(w => ({ ...w, _src: "watch", _why: `CVSS ${w.cvss_score} · EPSS ${w.epss_score == null ? "–" : (w.epss_score*100).toFixed(1) + "%"} · not in KEV` }))]
     .sort((a, b) => rank(b, b._src) - rank(a, a._src)).slice(0, 6);
   renderStories(data.articles.filter(a => inWindow(tsOf(a, "published_at")) && hit(`${a.title} ${a.summary}`)));
-  $("#prio").innerHTML = items.length ? items.map(r => `<div class="prio-row">${sevHtml(r)}<div>${r._batch ? `<span class="t">${esc(r._label)} <span class="pill muted">×${r._n}</span></span>` : `<a class="t" href="https://nvd.nist.gov/vuln/detail/${esc(r.cve_id)}" target="_blank" rel="noopener">${esc(r.cve_id)}</a>`} · ${esc(r.vendor || r.matched_vendor)}${r.product ? " " + esc(r.product) : ""}<div class="why">${esc(r.vuln_name || (r.description || "").slice(0, 120))} · ${esc(r._why)}</div></div><span class="pill ${r._src === "kev" ? "kev" : "muted"}">${r._src === "kev" ? "KEV" : "watch"}</span></div>`).join("") : `<div class="empty">Nothing in the current window.</div>`;
+  $("#prio").innerHTML = items.length ? items.map(r => `<div class="prio-row">${sevHtml(r)}<div>${r._batch ? `<span class="t">${esc(r._label)} <span class="pill muted">×${r._n}</span></span>` : `<a class="t" href="${cveUrl(r.cve_id)}" target="_blank" rel="noopener">${esc(r.cve_id)}</a>`} · ${esc(r.vendor || r.matched_vendor)}${r.product ? " " + esc(r.product) : ""}<div class="why">${esc(r.vuln_name || (r.description || "").slice(0, 120))} · ${esc(r._why)}</div></div><span class="pill ${r._src === "kev" ? "kev" : "muted"}">${r._src === "kev" ? "KEV" : "watch"}</span></div>`).join("") : `<div class="empty">Nothing in the current window.</div>`;
 }
 
 function renderStories(arts) {
   const top = [...arts].filter(a => a.relevant).sort((a, b) => b.score - a.score || tsOf(b, "published_at") - tsOf(a, "published_at")).slice(0, 6);
   $("#storiesCount").textContent = top.length ? `${top.length} of ${arts.filter(a => a.relevant).length}` : "";
   $("#stories").innerHTML = top.length ? top.map(a => `<div class="story">
-    <div class="hd"><a href="${esc(a.link)}" target="_blank" rel="noopener">${esc(a.title)}</a><span class="score">${a.score}</span>${isNew(a.published_at) ? `<span class="pill new">new</span>` : ""}</div>
+    <div class="hd"><a href="${safeUrl(a.link)}" target="_blank" rel="noopener">${esc(a.title)}</a><span class="score">${a.score}</span>${isNew(a.published_at) ? `<span class="pill new">new</span>` : ""}</div>
     <div class="meta">${esc(a.product_group || "General")} · ${esc(a.source)} · ${fmtDT(a.published_at)}</div>
     <div class="sum">${a.ai_summary ? esc(a.ai_summary) : esc(clip(a.summary || "", 260))}</div>${a.ai_reason ? `<div class="act">→ ${esc(a.ai_reason)}</div>` : ""}
     <div class="chips">${(a.matched_terms || []).slice(0, 6).map(k => `<span class="kw ${SIGNALS.has(k) ? "sig" : ""}">${esc(k)}</span>`).join("")}</div>
@@ -430,7 +452,7 @@ function renderKev(rows) {
   $("#kevCount").textContent = `${rows.length} shown`;
   t.tBodies[0].innerHTML = rows.length ? rows.map(k => `
     <tr class="${k.ransomware === "Known" ? "rw" : ""}">
-      <td class="mono"><a href="https://nvd.nist.gov/vuln/detail/${esc(k.cve_id)}" target="_blank" rel="noopener">${esc(k.cve_id)}</a>${isNew(k.date_added) ? ` <span class="pill new">new</span>` : ""}</td>
+      <td class="mono"><a href="${cveUrl(k.cve_id)}" target="_blank" rel="noopener">${esc(k.cve_id)}</a>${isNew(k.date_added) ? ` <span class="pill new">new</span>` : ""}</td>
       <td>${sevHtml(k)}</td><td>${epssHtml(k)}</td>
       <td><div class="t">${esc(k.product_group || "Other")}</div><div class="s">${esc(k.vendor)} ${esc(k.product)}</div></td>
       <td><div class="t">${esc(k.vuln_name)}</div>${k.ai_summary ? `<div class="ai">${esc(k.ai_summary)}${k.ai_reason ? `<div class="act">→ ${esc(k.ai_reason)}</div>` : ""}</div>` : `<div class="s">${esc((k.description || "").slice(0, 160))}</div>`}</td>
@@ -443,7 +465,7 @@ function renderWatch(rows) {
   $("#watchCount").textContent = `${rows.length} shown`;
   t.tBodies[0].innerHTML = rows.length ? rows.map(w => `
     <tr>
-      <td class="mono">${w._batch ? `<span class="t">${esc(w._label)}</span> <span class="pill muted">×${w._n}</span>` : `<a href="https://nvd.nist.gov/vuln/detail/${esc(w.cve_id)}" target="_blank" rel="noopener">${esc(w.cve_id)}</a>`}${isNew(w.published_at) ? ` <span class="pill new">new</span>` : ""}</td>
+      <td class="mono">${w._batch ? `<span class="t">${esc(w._label)}</span> <span class="pill muted">×${w._n}</span>` : `<a href="${cveUrl(w.cve_id)}" target="_blank" rel="noopener">${esc(w.cve_id)}</a>`}${isNew(w.published_at) ? ` <span class="pill new">new</span>` : ""}</td>
       <td>${sevHtml(w)}</td><td>${epssHtml(w)}</td>
       <td><div class="t">${esc(w.product_group || "Other")}</div><div class="s">${w._batch ? "release batch" : esc(w.matched_vendor)}</div></td>
       <td>${w.ai_summary ? `<div class="ai">${esc(w.ai_summary)}${w.ai_reason ? `<div class="act">→ ${esc(w.ai_reason)}</div>` : ""}</div><div class="s">${esc((w.description || "").slice(0, 140))}…</div>` : `${esc((w.description || "").slice(0, 220))}${(w.description || "").length > 220 ? "…" : ""}${w.ai_reason ? `<div class="act">→ ${esc(w.ai_reason)}</div>` : ""}`}</td>
@@ -456,8 +478,8 @@ function renderArts(rows) {
   $("#artCount").textContent = `${rows.length} shown`;
   t.tBodies[0].innerHTML = rows.length ? rows.map(a => `
     <tr>
-      <td class="mono"><span class="t">${a.score}</span> ${a.relevant ? `<span class="pill ok">kept</span>` : `<span class="pill muted">dropped</span>`}</td>
-      <td><div class="t"><a href="${esc(a.link)}" target="_blank" rel="noopener">${esc(a.title)}</a>${isNew(a.published_at) ? ` <span class="pill new">new</span>` : ""}</div>${a.ai_summary ? `<div class="ai">${esc(a.ai_summary)}${a.ai_reason ? `<div class="act">→ ${esc(a.ai_reason)}</div>` : ""}</div>` : `<div class="s">${esc((a.summary || "").slice(0, 180))}</div>`}</td>
+      <td class="mono"><span class="t">${a.score}</span> ${a.relevant && a.ai_verdict !== false ? `<span class="pill ok">kept</span>` : a.relevant ? `<span class="pill muted" title="Keyword score kept it; Claude judged it not relevant to our clients">AI: skip</span>` : `<span class="pill muted">dropped</span>`}</td>
+      <td><div class="t"><a href="${safeUrl(a.link)}" target="_blank" rel="noopener">${esc(a.title)}</a>${isNew(a.published_at) ? ` <span class="pill new">new</span>` : ""}</div>${a.ai_summary ? `<div class="ai">${esc(a.ai_summary)}${a.ai_reason ? `<div class="act">→ ${esc(a.ai_reason)}</div>` : ""}</div>` : `<div class="s">${esc((a.summary || "").slice(0, 180))}</div>`}</td>
       <td><div class="t">${esc(a.product_group || (a.relevant ? "General" : "–"))}</div><div class="s">${esc(a.source)}</div></td>
       <td><div class="chips">${(a.matched_terms || []).map(k => `<span class="kw ${SIGNALS.has(k) ? "sig" : ""}">${esc(k)}</span>`).join("") || `<span class="s">no matches</span>`}</div>${a.ai_reason ? `<div class="s">AI: ${esc(a.ai_reason)}</div>` : ""}</td>
       <td class="mono">${fmtDT(a.published_at)}</td></tr>`).join("")
