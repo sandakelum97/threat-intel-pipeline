@@ -303,8 +303,8 @@ footer { color: var(--muted); font-size: 12px; margin-top: 24px; }
 // ===================== CONFIG =====================
 const SUPABASE_URL = "https://wpxxcuncbduchwicsysn.supabase.co";          // e.g. https://abcd1234.supabase.co
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndweHhjdW5jYmR1Y2h3aWNzeXNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM4ODM4NTEsImV4cCI6MjEwOTQ1OTg1MX0.GzsojSZPDJJtS_0h8n8xIUyXzEhPs341YK682fxbrbc";     // anon / publishable key only – never the service role key
-const N8N_RUN_BASE = "";          // e.g. http://localhost:5678 (or the tunnel URL) – leave empty to hide the Run buttons
-const RUN_TOKEN = "";             // value of the n8n "TI run token" header credential (x-run-token)
+const N8N_RUN_BASE = "http://localhost:5678";          // e.g. http://localhost:5678 (or the tunnel URL) – leave empty to hide the Run buttons
+const RUN_TOKEN = "<the tirun_… value from .tiw_cfg.local>";             // value of the n8n "TI run token" header credential (x-run-token)
 // ==================================================
 
 const SIGNALS = new Set(["zero-day","0-day","actively exploited","in the wild","exploited","ransomware","critical","rce","remote code execution","authentication bypass","patch now","emergency","out-of-band","cve-","australia","australian","msp","mssp","rmm","supply chain","phishing","data breach","chromium-edge-batch"]);
