@@ -110,12 +110,12 @@ insert into public.demo_software (device_id, match_term, display_name, version, 
   ('t02-file01','windows',        'Microsoft Windows Server',   '2022',         '2031-10-14'),
   ('t02-mail01','exchange',       'Microsoft Exchange Server',  '2019 CU14',    '2025-10-14'),
   ('t02-old01', 'windows',        'Microsoft Windows Server',   '2012',         '2023-10-10'),
-  ('t03-vh01',  'vmware',         'VMware ESXi',                '8.0 U3',       null),
+  ('t03-vh01',  'esxi',           'VMware ESXi',                '8.0 U3',       null),
   ('t03-app01', 'sharepoint',     'Microsoft SharePoint Server','Subscription', null),
   ('t03-app01', 'windows',        'Microsoft Windows Server',   '2022',         '2031-10-14'),
   ('t03-ws021', 'windows',        'Microsoft Windows 11',       '24H2',         null),
   ('t03-ws021', 'chrome',         'Google Chrome',              '141',          null),
-  ('t03-ws021', 'adobe',          'Adobe Acrobat Reader',       '2025',         null),
+  ('t03-ws021', 'acrobat',         'Adobe Acrobat Reader',       '2025',         null),
   ('t03-dev01', 'gitlab',         'GitLab CE',                  '17.x',         null);
 
 -- ---------------------------------------------------------------------------

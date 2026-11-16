@@ -12,7 +12,7 @@
           ]
         }
       },
-      "id": "dec7a7f4-fb78-44a8-b45b-9c322926ac70",
+      "id": "422a8151-5ef1-4a31-9cb1-3d23584b3a98",
       "name": "Schedule",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
@@ -26,7 +26,7 @@
         "jsCode": "// ====== DEMO CONFIG \u2013 move secrets to n8n Credentials before production ======\nconst PRODUCT_GROUPS = {\n  // group name           : terms matched (case-insensitive) in KEV vendor/product, NVD CPE/description, article text\n  \"Microsoft\":            [\"Microsoft\",\"Windows\",\"Exchange\",\"SharePoint\",\"Office\",\"Entra\",\"Azure\",\"Intune\",\"Hyper-V\",\"SQL Server\",\"Teams\",\"OneDrive\",\"Outlook\",\"Defender\"],\n  \"Fortinet\":             [\"Fortinet\",\"FortiGate\",\"FortiOS\",\"FortiManager\",\"FortiAnalyzer\",\"FortiClient\"],\n  \"ConnectWise\":          [\"ConnectWise\",\"ScreenConnect\"],\n  \"NinjaOne\":             [\"NinjaOne\",\"Ninja RMM\"],\n  \"Cisco\":                [\"Cisco\"],\n  \"Ivanti\":               [\"Ivanti\"],\n  \"Citrix\":               [\"Citrix\",\"NetScaler\"],\n  \"VMware\":               [\"VMware\",\"Broadcom\"],\n  \"Veeam\":                [\"Veeam\"],\n  \"SonicWall\":            [\"SonicWall\"],\n  \"Palo Alto\":            [\"Palo Alto\",\"PAN-OS\",\"GlobalProtect\"],\n  \"Apple\":                [\"Apple\",\"iOS\",\"macOS\"],\n  \"Google / Chrome\":      [\"Google\",\"Chrome\",\"Chromium\"],\n  \"Mozilla\":              [\"Mozilla\",\"Firefox\"],\n  \"Adobe\":                [\"Adobe\",\"Acrobat\"],\n  \"Atlassian\":            [\"Atlassian\",\"Confluence\",\"Jira\"],\n  \"Oracle\":               [\"Oracle\"],\n  \"SolarWinds\":           [\"SolarWinds\"],\n  \"ManageEngine\":         [\"Zoho\",\"ManageEngine\"],\n  \"NAS\":                  [\"Synology\",\"QNAP\"],\n  \"Ubiquiti\":             [\"Ubiquiti\",\"UniFi\"],\n  \"Hardware OEM\":         [\"Dell\",\"Lenovo\"],\n  \"Progress / MOVEit\":    [\"Progress\",\"MOVEit\"],\n  \"DevOps\":               [\"GitLab\",\"Jenkins\"],\n  \"Linux / OSS\":          [\"OpenSSL\",\"Linux\",\"Ubuntu\",\"Samba\"],\n  \"PaperCut\":             [\"PaperCut\"],\n  \"Kaseya\":               [\"Kaseya\"],\n  \"Security tools\":       [\"CrowdStrike\",\"Proofpoint\",\"ThreatLocker\",\"Auvik\"],\n  \"Archivers\":            [\"7-Zip\",\"WinRAR\"],\n  \"Proxmox\":              [\"Proxmox\"],\n};\nreturn [{\n  json: {\n    SUPABASE_URL: \"https://YOUR-PROJECT.supabase.co\",\n    SUPABASE_SERVICE_KEY: \"YOUR-SERVICE-ROLE-KEY\",      // server-side only, never in the dashboard\n    TEAMS_WEBHOOK: \"https://YOUR-TENANT.webhook.office.com/webhookb2/....\",\n    DASHBOARD_URL: \"https://your-dashboard-url/\",      // linked at the bottom of every email/card\n    EMAIL_TO: \"you@example.com\",                       // comma-separated list for the team digest\n    EMAIL_FROM: \"Threat Intel <you@gmail.com>\",        // must match the SMTP credential account\n\n    PRODUCT_GROUPS,\n    VENDOR_ALLOWLIST: Object.values(PRODUCT_GROUPS).flat(),\n\n    // High-signal phrases for news scoring (weight added to score)\n    SIGNAL_TERMS: {\n      \"zero-day\": 3, \"0-day\": 3, \"actively exploited\": 3, \"in the wild\": 3,\n      \"exploited\": 2, \"ransomware\": 2, \"critical\": 1, \"rce\": 2, \"remote code execution\": 2,\n      \"authentication bypass\": 2, \"patch now\": 2, \"emergency\": 2, \"out-of-band\": 2,\n      \"cve-\": 1, \"australia\": 2, \"australian\": 2, \"msp\": 2, \"mssp\": 2, \"rmm\": 2,\n      \"supply chain\": 1, \"phishing\": 1, \"data breach\": 1\n    },\n    MIN_SCORE: 3,                 // article is \"relevant\" at or above this\n    NEWS_MAX_AGE_DAYS: 7,         // ignore feed items older than this (MSRC feed returns its whole history)\n    KEV_LOOKBACK_DAYS: 14,        // on first run, only notify about KEV entries this recent\n\n    // CVE Watch / enrichment (TI 04, TI 05)\n    NVD_API_KEY: \"YOUR-NVD-API-KEY\",   // https://nvd.nist.gov/developers/request-an-api-key\n    CVSS_MIN: 7.0,                     // CVE Watch keeps CVEs at or above this base score\n    CVE_LOOKBACK_HOURS: 48,            // NVD publication window per run\n    ENRICH_BATCH: 60,                  // KEV rows enriched per TI 05 run\n\n    // AI summaries (Claude). Credential \"Anthropic account\" is selected on the Claude nodes.\n    AI_ENABLED: true,\n    AI_MODEL: \"claude-haiku-5-5\",\n    AI_MAX_PER_RUN: 25,\n    AI_CONTEXT: \"We are an Australian MSSP running Microsoft 365/Defender XDR/Sentinel/Entra, Fortinet (FortiGate/FortiManager/FortiAnalyzer), ConnectWise and NinjaOne RMM, CrowdStrike Falcon, Proofpoint, ThreatLocker, Nessus and Auvik across ~50 SMB client tenants.\"\n  }\n}];",
         "mode": "runOnceForAllItems"
       },
-      "id": "1e85ed9b-b407-4478-8902-8d5d1cbb4a8a",
+      "id": "9143e789-b3af-4670-90c8-1ef8673c507b",
       "name": "Config",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -56,7 +56,7 @@
           ]
         }
       },
-      "id": "79cc560d-dbcb-48dd-9891-8ea2dfe143e4",
+      "id": "5a12d3d3-a57d-4d33-9fda-771198f9889d",
       "name": "Get KEV to check",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -88,7 +88,7 @@
           ]
         }
       },
-      "id": "a4c75005-e160-4e26-b5de-f53893bf033d",
+      "id": "d3b47586-e59d-4bd8-8c5c-7a321250df56",
       "name": "Get CVE Watch to check",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -101,10 +101,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// CVEs in kev_entries and cve_watch that were never checked, or not checked for 3 days.\nconst ids = new Set();\nfor (const n of ['Get KEV to check', 'Get CVE Watch to check'])\n  for (const i of $(n).all()) { const id = String(i.json?.cve_id || '').toUpperCase(); if (/^CVE-\\d{4}-\\d{4,}$/.test(id)) ids.add(id); }\nconst list = [...ids].slice(0, 150);\nif (!list.length) return [];\n// Vulnrichment layout: <year>/<number div 1000>xxx/<CVE id>.json on the 'develop' branch\nreturn list.map(id => { const [, y, n] = id.match(/^CVE-(\\d{4})-(\\d+)$/);\n  return { json: { cve_id: id, url: `https://raw.githubusercontent.com/cisagov/vulnrichment/develop/${y}/${Math.floor(Number(n) / 1000)}xxx/${id}.json` } }; });",
+        "jsCode": "// CVEs in kev_entries and cve_watch that were never checked, or not checked for 3 days.\n// Alternate KEV and CVE Watch rows so neither list waits for the other to finish.\nconst pick = (n) => $(n).all().map(i => String(i.json?.cve_id || '').toUpperCase()).filter(id => /^CVE-\\d{4}-\\d{4,}$/.test(id));\nconst a = pick('Get KEV to check'), b = pick('Get CVE Watch to check'), ids = new Set();\nfor (let k = 0; k < Math.max(a.length, b.length); k++) { if (a[k]) ids.add(a[k]); if (b[k]) ids.add(b[k]); }\nconst list = [...ids].slice(0, 150);\nif (!list.length) return [];\n// Vulnrichment layout: <year>/<number div 1000>xxx/<CVE id>.json on the 'develop' branch\nreturn list.map(id => { const [, y, n] = id.match(/^CVE-(\\d{4})-(\\d+)$/);\n  return { json: { cve_id: id, url: `https://raw.githubusercontent.com/cisagov/vulnrichment/develop/${y}/${Math.floor(Number(n) / 1000)}xxx/${id}.json` } }; });",
         "mode": "runOnceForAllItems"
       },
-      "id": "2d9e41a3-6381-4541-b5f2-2bed48fb7703",
+      "id": "3a8dea18-2532-452d-8a56-94b6d8eaa4fb",
       "name": "Rows to check",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -143,7 +143,7 @@
           ]
         }
       },
-      "id": "bc133a71-cc32-4543-9e26-8a4703c96989",
+      "id": "e6c40cc9-af04-4f35-9638-3ea719736a31",
       "name": "Fetch Vulnrichment",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -158,15 +158,14 @@
         "jsCode": "// Read CISA's SSVC block (ADP container 'CISA-ADP', metrics[].other.type === 'ssvc').\n// 404 = no Vulnrichment record yet -> not_assessed. Any other failure (rate limit, network) is skipped\n// so the CVE is simply retried next run instead of being wrongly marked not_assessed.\nconst req = $('Rows to check').all().map(i => i.json);\nconst res = $input.all();\nconst rows = []; let skipped = 0;\nreq.forEach((r, i) => {\n  const x = res[i]?.json || {};\n  const code = Number(x.statusCode);\n  const out = { cve_id: r.cve_id, exploitation: null, automatable: null, technical_impact: null, status: 'not_assessed', assessed_at: null };\n  if (code === 404) { rows.push(out); return; }\n  if (code !== 200) { skipped++; return; }\n  let j; try { const b = x.body ?? x.data; j = typeof b === 'string' ? JSON.parse(b) : b; } catch (e) { skipped++; return; }\n  for (const adp of j?.containers?.adp || []) {\n    if ((adp.providerMetadata?.shortName || '') !== 'CISA-ADP') continue;\n    for (const m of adp.metrics || []) {\n      const o = m?.other; if (o?.type !== 'ssvc') continue;\n      for (const opt of o.content?.options || []) {\n        const [k, v] = Object.entries(opt || {})[0] || []; const val = String(v || '').toLowerCase();\n        if (k === 'Exploitation' && ['none', 'poc', 'active'].includes(val)) out.exploitation = val;\n        if (k === 'Automatable' && ['no', 'yes'].includes(val)) out.automatable = val;\n        if (k === 'Technical Impact' && ['partial', 'total'].includes(val)) out.technical_impact = val;\n      }\n      if (o.content?.timestamp) out.assessed_at = o.content.timestamp;\n    }\n  }\n  if (out.exploitation || out.automatable) out.status = 'assessed';\n  rows.push(out);\n});\nreturn [{ json: { rows, assessed: rows.filter(r => r.status === 'assessed').length, not_assessed: rows.filter(r => r.status === 'not_assessed').length, skipped } }];",
         "mode": "runOnceForAllItems"
       },
-      "id": "f7ac867b-17eb-4e4f-8ace-4e59123dee42",
+      "id": "7e0f640c-343c-43b6-b036-b98b3c603c78",
       "name": "Parse SSVC",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
         1100,
         300
-      ],
-      "executeOnce": true
+      ]
     },
     {
       "parameters": {
@@ -196,7 +195,7 @@
           "timeout": 60000
         }
       },
-      "id": "a0a2e916-a796-4ba0-9987-200ff8ed7d21",
+      "id": "a44c53aa-b8c4-494b-a61d-a036d9a92ca9",
       "name": "Save to tables",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -237,7 +236,7 @@
           "timeout": 60000
         }
       },
-      "id": "7b32e3ba-738f-4e48-b0dd-d127e044f6e9",
+      "id": "48a6323b-ae7c-4414-a0d9-d88e1790c60f",
       "name": "Log run",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -257,7 +256,7 @@
           "allowedOrigins": "*"
         }
       },
-      "id": "24252f00-1ab1-425f-ad4f-384781731ad3",
+      "id": "dd3cadb2-975a-4215-9d05-b2c26e959161",
       "name": "Run now",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
@@ -278,7 +277,7 @@
         "jsCode": "const safe = (f, d) => { try { const v = f(); return v ?? d; } catch (e) { return d; } };\nreturn [{ json: { kind: 'vulnrichment', count: safe(() => $('Parse SSVC').first().json.assessed, 0), payload: { not_assessed: safe(() => $('Parse SSVC').first().json.not_assessed, 0), skipped: safe(() => $('Parse SSVC').first().json.skipped, 0), checked: safe(() => $('Rows to check').all().length, 0) } } }];",
         "mode": "runOnceForAllItems"
       },
-      "id": "52cbee4c-f52c-4533-aeb8-88ce407f40d3",
+      "id": "6531f68d-e4e7-4a53-91ec-3a0e355f17cc",
       "name": "Run summary",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
