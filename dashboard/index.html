@@ -193,6 +193,12 @@ tr.rw td:first-child { box-shadow: inset 3px 0 0 var(--crit); }
 .fix { margin-top: 4px; font-size: 12.5px; padding: 5px 8px; border: 1px dashed var(--line2); border-radius: 6px; } .fix b { font-weight: 600; } .fix a { color: var(--accent); }
 .kw { background: var(--chip); font-family: var(--mono); font-size: 11px; padding: 1px 6px; border-radius: 4px; }
 .kw.sig { background: transparent; border: 1px solid var(--line); }
+.sa { display: inline-block; font-family: var(--mono); font-size: 11px; font-weight: 600; padding: 1px 8px; border-radius: 10px; border: 1px solid currentColor; text-transform: uppercase; letter-spacing: .03em; }
+.sa-immediate { color: var(--crit); background: rgba(255,101,101,.10); } .sa-out-of-cycle { color: var(--high); } .sa-scheduled { color: var(--med); } .sa-defer { color: var(--muted); }
+.ssvc-line { display: flex; flex-wrap: wrap; gap: 4px; }
+.demo-banner { border: 1px dashed var(--line2); border-radius: 8px; padding: 8px 12px; font-size: 12.5px; color: var(--muted); margin-bottom: 10px; } .demo-banner b { color: var(--fg); }
+.xtab { width: 100%; min-width: 0; border-collapse: collapse; font-size: 12.5px; } .xtab th, .xtab td { padding: 6px 8px; border-bottom: 1px solid var(--line); text-align: right; } .xtab th:first-child, .xtab td:first-child { text-align: left; }
+.xtab td.hl { background: var(--accent-soft); font-weight: 600; }
 .empty { padding: 24px; color: var(--muted); text-align: center; grid-column: 1 / -1; }
 .count { font-family: var(--mono); font-size: 12px; color: var(--muted); }
 pre.note { white-space: pre-wrap; font-family: inherit; font-size: 13px; line-height: 1.5; border: 1px solid var(--line); border-radius: var(--r); padding: 14px; max-height: 70vh; overflow: auto; background: var(--panel); margin: 0; }
@@ -235,6 +241,7 @@ footer { color: var(--muted); font-size: 12px; margin-top: 24px; }
   <button class="tab" role="tab" data-tab="kev">KEV <span class="n" id="nKev">0</span></button>
   <button class="tab" role="tab" data-tab="watch">CVE Watch <span class="n" id="nWatch">0</span></button>
   <button class="tab" role="tab" data-tab="articles">Articles <span class="n" id="nArt">0</span></button>
+  <button class="tab" role="tab" data-tab="ssvc">SSVC (demo) <span class="n" id="nSsvc">0</span></button>
   <button class="tab" role="tab" data-tab="note">Ticket note</button>
 </div>
 
@@ -290,6 +297,19 @@ footer { color: var(--muted); font-size: 12px; margin-top: 24px; }
     <tbody></tbody></table></div>
 </section>
 
+<section id="tab-ssvc" hidden>
+  <div class="demo-banner"><b>Demonstration only.</b> The clients, devices and versions on this tab are made up (tenant_01–03). The CVEs are real (KEV + CVE Watch). Devices are matched to CVEs by product name only, not version, so read each row as "check this device". Exploitation and Automatable come from CISA Vulnrichment; System Exposure, Mission, Safety and Human Impact come from the rules R1–R9, M1–M5, S1–S4; the action comes from the CERT/CC SSVC deployer table.</div>
+  <div class="sect-head"><div><h2>Patch action per device · SSVC next to CVSS</h2><span class="count" id="ssvcCount"></span></div><div class="r"><span class="seg" id="tenantSeg" role="group" aria-label="Tenant"></span></div></div>
+  <div class="strip" id="ssvcStrip"></div>
+  <div class="charts" style="grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));">
+    <div class="card"><h2>SSVC action vs CVSS severity · device-CVE pairs</h2><div id="ssvcX"></div><p class="muted" style="font-size:12px;margin:6px 0 0">Highlighted cells are where the two disagree most: CVSS says critical/high but SSVC says defer, or CVSS says medium/low but SSVC says act now.</p></div>
+    <div class="card"><h2>Why · rules that fired</h2><div id="ssvcRules"></div></div>
+  </div>
+  <div class="tablewrap"><table id="ssvcT" data-sort="_rank" data-dir="desc">
+    <thead><tr><th data-k="_rank">SSVC action</th><th class="mono" data-k="cve_id">CVE</th><th data-k="cvss_score">CVSS</th><th data-k="epss_score">EPSS</th><th data-k="device_id">Tenant · device</th><th>Software</th><th>Inputs (rule)</th></tr></thead>
+    <tbody></tbody></table></div>
+</section>
+
 <section id="tab-note" hidden>
   <div class="sect-head"><div><h2>Daily ticket note</h2><span class="count" id="noteMeta"></span></div><button class="btn" id="copyNote" type="button"><svg class="i"><use href="#i-copy"/></svg><span>Copy note</span></button></div>
   <p class="muted" style="margin-top:0">Plain-text summary of the last 24 h (new KEV entries, new high-severity CVEs in our stack, relevant news). Generated each weekday at 07:00 by TI 07 and emailed; paste it into the ticket note as normal text.</p>
@@ -316,6 +336,7 @@ const WORKFLOWS = [
   { kind: "kev-enrich", name: "KEV Enrich", wf: "TI 05", schedule: "every 2 h", maxH: 5, what: "KEV rows enriched (CVSS, EPSS, summary)" },
   { kind: "ai-summaries", name: "AI Summaries", wf: "TI 06", schedule: "hourly", maxH: 3, what: "articles summarised by Claude" },
   { kind: "ticket-note", name: "Ticket note", wf: "TI 07", schedule: "weekdays 07:00", maxH: 80, what: "items in the daily note" },
+  { kind: "vulnrichment", name: "Vulnrichment", wf: "TI 08", schedule: "every 6 h", maxH: 13, what: "CVEs with a CISA SSVC assessment" },
   { kind: "verify", name: "Verify data", wf: "TI 00", schedule: "manual", maxH: Infinity, what: "checks against CISA / NVD / EPSS (emailed)" },
 ];
 const RUN_COOLDOWN_MIN = 10;
@@ -355,7 +376,7 @@ const SAMPLE = {
   ]
 };
 
-let data = { kev: [], watch: [], articles: [], runs: [], notes: [] };
+let data = { kev: [], watch: [], articles: [], runs: [], notes: [], ssvc: [] };
 const state = { tab: "overview", q: "", days: 30, from: null, to: null, view: { kev: "tiles", watch: "tiles", arts: "tiles" }, chips: { sev: new Set(), vendor: new Set(), software: new Set(), source: new Set(), flags: new Set(["relevant"]) } };
 const FLAG_LABELS = { new: "New (24 h)", ransomware: "Ransomware known", notkev: "Not yet in KEV", expand: "Expand browser batches", relevant: "Relevant only" };
 const charts = {};
@@ -374,6 +395,11 @@ const isNew = (d) => d && (now() - new Date(d)) < DAY * 1.05;
 const tsOf = (r, k) => r[k] ? new Date(r[k]).getTime() : 0;
 const cssVar = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 const fixLine = (r) => (r.remediation || r.required_action) ? `<div class="fix"><b>Fix:</b> ${esc(r.remediation || r.required_action)}${r.advisory_url ? ` · <a href="${safeUrl(r.advisory_url)}" target="_blank" rel="noopener">vendor advisory</a>` : ""}</div>` : "";
+const ssvcChips = (r) => r.ssvc_status === "assessed"
+  ? `<span class="pill muted" title="CISA Vulnrichment SSVC assessment${r.ssvc_assessed_at ? ", " + esc(fmtD(r.ssvc_assessed_at)) : ""}">SSVC · Exploitation ${esc(r.ssvc_exploitation)} · Automatable ${esc(r.ssvc_automatable)}</span>`
+  : r.ssvc_status === "not_assessed" ? `<span class="pill muted" title="No CISA Vulnrichment SSVC record yet; the SSVC tab uses the CERT/CC defaults (Exploitation none, Automatable yes)">SSVC: not assessed by CISA</span>` : "";
+const SA_RANK = { immediate: 4, "out-of-cycle": 3, scheduled: 2, defer: 1 };
+const saHtml = (a) => `<span class="sa sa-${esc(a)}">${esc(a)}</span>`;
 const aiBlock = (r) => r.ai_summary ? `<div class="ai">${esc(r.ai_summary)}${r.ai_reason ? `<div class="act">→ ${esc(r.ai_reason)}</div>` : ""}</div>` : (r.ai_reason ? `<div class="act">→ ${esc(r.ai_reason)}</div>` : "");
 
 async function sb(path) {
@@ -390,15 +416,16 @@ async function load() {
   try {
     if (live) {
       const since = new Date(now() - 90 * DAY).toISOString();
-      const [kev, watch, articles, runs, notes] = await Promise.all([
+      const [kev, watch, articles, runs, notes, ssvc] = await Promise.all([
         sb(`kev_entries?order=date_added.desc&limit=1000`),
         sb(`cve_watch?order=published_at.desc&limit=500`).catch(() => []),
         sb(`articles?published_at=gte.${since}&order=score.desc,published_at.desc&limit=1000`),
         sb(`digest_log?order=sent_at.desc&limit=200`).catch(() => []),
         sb(`ticket_notes?order=note_date.desc&limit=7`).catch(() => []),
+        sb(`demo_ssvc_decisions?select=tenant_id,sector,device_id,business_function,software,software_version,out_of_support,source,cve_id,product_label,cvss_score,cvss_severity,epss_score,seen_at,system_exposure,exposure_rule_id,mission_impact,mission_rule_id,safety_impact,safety_rule_id,human_impact,ssvc_action,ssvc_exploitation_used,ssvc_automatable_used,defaults_used,ssvc_status&limit=5000`).catch(() => []),
       ]);
-      data = { kev, watch, articles, runs, notes };
-    } else data = SAMPLE;
+      data = { kev, watch, articles, runs, notes, ssvc };
+    } else data = { ...SAMPLE, ssvc: [] };
   } catch (e) {
     $("#runsNote").textContent = `load failed: ${e.message}`;
     return;
@@ -510,7 +537,7 @@ function buildFilters() {
   if (t === "kev" || t === "overview") flags.push(["ransomware", FLAG_LABELS.ransomware]);
   if (t === "watch") flags.push(["notkev", FLAG_LABELS.notkev], ["expand", FLAG_LABELS.expand]);
   if (t === "articles") flags.push(["relevant", FLAG_LABELS.relevant]);
-  dd("flags", "Flags", flags.map(([k, l]) => [k, l, null]));
+  if (t !== "ssvc") dd("flags", "Flags", flags.map(([k, l]) => [k, l, null]));
   const sp = document.createElement("span"); sp.className = "spacer"; row.appendChild(sp);
   const clr = document.createElement("button"); clr.type = "button"; clr.className = "link"; clr.id = "clearAll"; clr.textContent = "Clear filters";
   clr.addEventListener("click", () => { for (const k of Object.keys(state.chips)) state.chips[k].clear(); state.chips.flags.add("relevant"); state.q = ""; $("#q").value = ""; setWindow(30); buildFilters(); render(); });
@@ -520,7 +547,7 @@ function buildFilters() {
 function syncCounts() {
   $$("details.dd").forEach(d => { const n = state.chips[d.dataset.group].size; d.querySelector(".cnt").textContent = n ? n : ""; });
   const ar = $("#activeRow"); ar.innerHTML = "";
-  const tabFlags = { overview: ["new", "ransomware"], kev: ["new", "ransomware"], watch: ["new", "notkev", "expand"], articles: ["new", "relevant"], note: [] }[state.tab] || [];
+  const tabFlags = { ssvc: [], overview: ["new", "ransomware"], kev: ["new", "ransomware"], watch: ["new", "notkev", "expand"], articles: ["new", "relevant"], note: [] }[state.tab] || [];
   for (const [group, set] of Object.entries(state.chips)) for (const key of set) {
     if (group === "flags" && !tabFlags.includes(key)) continue;
     if (group === "source" && state.tab !== "articles") continue;
@@ -556,6 +583,7 @@ function render() {
   const kev = kevRows(), watch = watchRows(), arts = artRows();
   $("#nKev").textContent = data.kev.filter(k => inWindow(tsOf(k, "date_added"))).length;
   $("#nWatch").textContent = data.watch.filter(w => inWindow(tsOf(w, "published_at"))).length;
+  $("#nSsvc").textContent = data.ssvc.length;
   $("#nArt").textContent = data.articles.filter(a => artKept(a) && inWindow(tsOf(a, "published_at"))).length;
   $$("section[id^=tab-]").forEach(s => s.hidden = s.id !== `tab-${state.tab}`);
   $(".filters").hidden = state.tab === "note";
@@ -563,6 +591,7 @@ function render() {
   if (state.tab === "kev") renderKev(kev);
   if (state.tab === "watch") renderWatch(watch);
   if (state.tab === "articles") renderArts(arts);
+  if (state.tab === "ssvc") renderSsvc();
   if (state.tab === "note") renderNote();
 }
 
@@ -647,7 +676,7 @@ function renderKev(rows) {
   $("#kevGrid").innerHTML = rows.length ? rows.map(k => `<article class="g ${k.ransomware === "Known" ? "rw" : ""}">
       <div class="top"><a class="id" href="${cveUrl(k.cve_id)}" target="_blank" rel="noopener">${esc(k.cve_id)}</a>${sevHtml(k)}${isNew(k.date_added) ? `<span class="pill new">new</span>` : ""}${k.ransomware === "Known" ? `<span class="pill crit">ransomware</span>` : ""}<span class="spacer"></span><span class="grp">${esc(k.product_group || "Other")}</span></div>
       <div class="ttl">${esc(k.vuln_name)}</div>
-      <div class="meta"><span>${esc(k.product_name || `${k.vendor} ${k.product}`)}</span></div>
+      <div class="meta"><span>${esc(k.product_name || `${k.vendor} ${k.product}`)}</span></div>${ssvcChips(k) ? `<div class="ssvc-line">${ssvcChips(k)}</div>` : ""}
       ${k.ai_summary ? aiBlock(k) : `<div class="sum">${esc((k.description || "").slice(0, 200))}</div>`}${fixLine(k)}
       <div class="ft"><span>${epssHtml(k)}</span><span class="mono">added ${fmtD(k.date_added)} · due ${fmtD(k.due_date)}</span></div>
     </article>`).join("") : `<div class="empty">No KEV entries match.</div>`;
@@ -655,7 +684,7 @@ function renderKev(rows) {
     <tr class="${k.ransomware === "Known" ? "rw" : ""}">
       <td class="mono"><a href="${cveUrl(k.cve_id)}" target="_blank" rel="noopener">${esc(k.cve_id)}</a>${isNew(k.date_added) ? ` <span class="pill new">new</span>` : ""}</td>
       <td>${sevHtml(k)}</td><td>${epssHtml(k)}</td>
-      <td><div class="t">${esc(k.product_name || k.product_group || "Other")}</div><div class="s">${esc(k.product_group || "")} · ${esc(k.vendor)} ${esc(k.product)}</div></td>
+      <td><div class="t">${esc(k.product_name || k.product_group || "Other")}</div><div class="s">${esc(k.product_group || "")} · ${esc(k.vendor)} ${esc(k.product)}</div>${ssvcChips(k)}</td>
       <td><div class="t">${esc(k.vuln_name)}</div>${k.ai_summary ? aiBlock(k) : `<div class="s">${esc((k.description || "").slice(0, 160))}</div>`}${fixLine(k)}</td>
       <td class="mono">${fmtD(k.date_added)}</td><td class="mono">${fmtD(k.due_date)}</td>
       <td>${k.ransomware === "Known" ? `<span class="pill crit">Known</span>` : `<span class="pill muted">Unknown</span>`}</td></tr>`).join("")
@@ -668,7 +697,7 @@ function renderWatch(rows) {
   showView("watch", "watchGrid", "watchTable");
   $("#watchGrid").innerHTML = rows.length ? rows.map(w => `<article class="g">
       <div class="top">${w._batch ? `<span class="id">${esc(w._label)}</span><span class="pill muted">×${w._n}</span>` : `<a class="id" href="${cveUrl(w.cve_id)}" target="_blank" rel="noopener">${esc(w.cve_id)}</a>`}${sevHtml(w)}${isNew(w.published_at) ? `<span class="pill new">new</span>` : ""}${w.in_kev ? `<span class="pill kev">in KEV</span>` : ""}<span class="spacer"></span><span class="grp">${esc(w.product_group || "Other")}</span></div>
-      ${w.product_name && !w._batch ? `<div class="meta"><span>${esc(w.product_name)}</span></div>` : ""}
+      ${w.product_name && !w._batch ? `<div class="meta"><span>${esc(w.product_name)}</span></div>` : ""}${!w._batch && ssvcChips(w) ? `<div class="ssvc-line">${ssvcChips(w)}</div>` : ""}
       ${w.ai_summary ? aiBlock(w) + `<div class="sum muted">${esc((w.description || "").slice(0, 160))}…</div>` : `<div class="sum">${esc((w.description || "").slice(0, 260))}${(w.description || "").length > 260 ? "…" : ""}</div>${w.ai_reason ? `<div class="act">→ ${esc(w.ai_reason)}</div>` : ""}`}${fixLine(w)}
       <div class="ft"><span>${epssHtml(w)}</span><span class="mono">${w._batch ? "release batch" : esc(w.matched_vendor)} · ${fmtDT(w.published_at)}</span></div>
     </article>`).join("") : `<div class="empty">No CVEs match. (TI 04 populates this table.)</div>`;
@@ -676,7 +705,7 @@ function renderWatch(rows) {
     <tr>
       <td class="mono">${w._batch ? `<span class="t">${esc(w._label)}</span> <span class="pill muted">×${w._n}</span>` : `<a href="${cveUrl(w.cve_id)}" target="_blank" rel="noopener">${esc(w.cve_id)}</a>`}${isNew(w.published_at) ? ` <span class="pill new">new</span>` : ""}</td>
       <td>${sevHtml(w)}</td><td>${epssHtml(w)}</td>
-      <td><div class="t">${esc(w.product_name || w.product_group || "Other")}</div><div class="s">${esc(w.product_group || "")}${w._batch ? " · release batch" : ""}</div></td>
+      <td><div class="t">${esc(w.product_name || w.product_group || "Other")}</div><div class="s">${esc(w.product_group || "")}${w._batch ? " · release batch" : ""}</div>${w._batch ? "" : ssvcChips(w)}</td>
       <td>${w.ai_summary ? aiBlock(w) + `<div class="s">${esc((w.description || "").slice(0, 140))}…</div>` : `${esc((w.description || "").slice(0, 220))}${(w.description || "").length > 220 ? "…" : ""}${w.ai_reason ? `<div class="act">→ ${esc(w.ai_reason)}</div>` : ""}`}${fixLine(w)}</td>
       <td class="mono">${fmtDT(w.published_at)}</td>
       <td>${w.in_kev ? `<span class="pill kev">in KEV</span>` : `<span class="pill muted">watch</span>`}</td></tr>`).join("")
@@ -703,6 +732,49 @@ function renderArts(rows) {
       <td><div class="chips">${(a.matched_terms || []).map(k => `<span class="kw ${SIGNALS.has(k) ? "sig" : ""}">${esc(k)}</span>`).join("") || `<span class="s">no matches</span>`}</div>${a.ai_reason ? `<div class="s">AI: ${esc(a.ai_reason)}</div>` : ""}</td>
       <td class="mono">${fmtDT(a.published_at)}</td></tr>`).join("")
     : `<tr><td colspan="5" class="empty">No articles match.</td></tr>`;
+}
+
+// ----- SSVC (demo estate)
+state.tenant = "all";
+function renderSsvc() {
+  const all = data.ssvc || [];
+  const tenants = [...new Set(all.map(r => r.tenant_id))].sort();
+  $("#tenantSeg").innerHTML = ["all", ...tenants].map(t => `<button type="button" data-t="${esc(t)}" aria-pressed="${state.tenant === t}">${t === "all" ? "All" : esc(t)}</button>`).join("");
+  $$("#tenantSeg button").forEach(b => b.addEventListener("click", () => { state.tenant = b.dataset.t; renderSsvc(); }));
+  const rows = all.filter(r => (state.tenant === "all" || r.tenant_id === state.tenant)
+    && hit(`${r.cve_id} ${r.device_id} ${r.software} ${r.product_label} ${r.business_function} ${r.tenant_id}`))
+    .map(r => ({ ...r, _rank: (SA_RANK[r.ssvc_action] || 0) * 10 + (r.epss_score || 0) }));
+  if (!all.length) {
+    $("#ssvcCount").textContent = ""; $("#ssvcStrip").innerHTML = ""; $("#ssvcX").innerHTML = ""; $("#ssvcRules").innerHTML = "";
+    $("#ssvcT").tBodies[0].innerHTML = `<tr><td colspan="7" class="empty">No demo decisions yet. Run migrations 007, 008 and 009 in Supabase, then let TI 08 (Vulnrichment) run once.</td></tr>`;
+    return;
+  }
+  const by = (k) => rows.reduce((m, r) => (m[r[k]] = (m[r[k]] || 0) + 1, m), {});
+  const act = by("ssvc_action"), dflt = rows.filter(r => (r.defaults_used || []).length).length, eos = rows.filter(r => r.out_of_support).length;
+  const cvssHi = rows.filter(r => (r.cvss_score || 0) >= 7).length, ssvcAct = rows.filter(r => r.ssvc_action !== "defer").length;
+  $("#ssvcCount").textContent = `${rows.length} device-CVE pairs · ${new Set(rows.map(r => r.device_id)).size} devices`;
+  $("#ssvcStrip").innerHTML = [
+    tile(act.immediate || 0, "immediate", "SSVC", act.immediate ? "crit" : ""), tile(act["out-of-cycle"] || 0, "out-of-cycle", "SSVC", act["out-of-cycle"] ? "high" : ""),
+    tile(act.scheduled || 0, "scheduled", "SSVC", ""), tile(act.defer || 0, "defer", "SSVC", ""),
+    tile(cvssHi, "CVSS ≥ 7", `SSVC acts on ${ssvcAct}`, "info"), tile(dflt, "default used", "CISA had no SSVC record", dflt ? "high" : ""),
+    tile(eos, "out of support", "software past end of support", eos ? "crit" : ""),
+  ].join("");
+  const acts = ["immediate", "out-of-cycle", "scheduled", "defer"], bands = ["critical", "high", "medium", "low", "none"];
+  const band = (r) => r.cvss_score == null ? "none" : r.cvss_score >= 9 ? "critical" : r.cvss_score >= 7 ? "high" : r.cvss_score >= 4 ? "medium" : r.cvss_score > 0 ? "low" : "none";
+  const cell = (a, b) => rows.filter(r => r.ssvc_action === a && band(r) === b).length;
+  const hl = (a, b) => (a === "defer" && (b === "critical" || b === "high")) || ((a === "immediate" || a === "out-of-cycle") && (b === "medium" || b === "low"));
+  $("#ssvcX").innerHTML = `<table class="xtab"><thead><tr><th>SSVC ↓ / CVSS →</th>${bands.map(b => `<th>${b === "none" ? "no score" : b}</th>`).join("")}</tr></thead><tbody>${acts.map(a => `<tr><td>${saHtml(a)}</td>${bands.map(b => { const n = cell(a, b); return `<td class="${n && hl(a, b) ? "hl" : ""}">${n || "·"}</td>`; }).join("")}</tr>`).join("")}</tbody></table>`;
+  const rc = (k) => Object.entries(by(k)).sort((a, b) => b[1] - a[1]).map(([id, n]) => `<span class="pill muted">${esc(id)} · ${n}</span>`).join(" ");
+  $("#ssvcRules").innerHTML = `<div class="label">System Exposure</div><div class="chips">${rc("exposure_rule_id")}</div><div class="label" style="margin-top:8px">Mission Impact</div><div class="chips">${rc("mission_rule_id")}</div><div class="label" style="margin-top:8px">Safety Impact</div><div class="chips">${rc("safety_rule_id")}</div>`;
+  const t = $("#ssvcT"); markSorted(t); const sorted = sortRows(rows, t).slice(0, 300);
+  t.tBodies[0].innerHTML = sorted.map(r => `<tr>
+      <td>${saHtml(r.ssvc_action)}${(r.defaults_used || []).length ? `<div class="s" title="CERT/CC default used for: ${esc(r.defaults_used.join(", "))}">default: ${esc(r.defaults_used.join(", "))}</div>` : ""}</td>
+      <td class="mono"><a href="${cveUrl(r.cve_id)}" target="_blank" rel="noopener">${esc(r.cve_id)}</a><div class="s">${esc(r.source)}</div></td>
+      <td>${sevHtml(r)}</td><td>${epssHtml(r)}</td>
+      <td><div class="t">${esc(r.device_id)}</div><div class="s">${esc(r.tenant_id)} · ${esc(r.sector)} · ${esc(r.business_function || "unknown function")}</div></td>
+      <td><div class="t">${esc(r.software)} ${esc(r.software_version || "")}</div><div class="s">${esc(r.product_label || "")}</div>${r.out_of_support ? `<span class="pill crit">out of support</span>` : ""}</td>
+      <td class="s">Exploitation <b>${esc(r.ssvc_exploitation_used)}</b> · Automatable <b>${esc(r.ssvc_automatable_used)}</b><br>Exposure <b>${esc(r.system_exposure)}</b> (${esc(r.exposure_rule_id)}) · Human <b>${esc(r.human_impact)}</b><br><span class="muted">${esc(r.mission_rule_id)} · ${esc(r.safety_rule_id)}</span></td></tr>`).join("")
+    + (rows.length > 300 ? `<tr><td colspan="7" class="empty">Showing the top 300 of ${rows.length}. Pick a tenant or search to narrow.</td></tr>` : "");
 }
 
 // ----- wiring

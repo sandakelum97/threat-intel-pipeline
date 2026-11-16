@@ -6,7 +6,7 @@ date: "November 2026"
 ---
 
 **Author:** Tharaka D. — Security Engineer (L2/L3), Subnet, via TGT Global · GitHub `sandakelum97`
-**Version:** 1.1 · November 2026 · Repository: `threat-intel-pipeline` (private)
+**Version:** 1.2 · November 2026 · Repository: `threat-intel-pipeline` (private)
 
 # 1. What this project is, in plain words
 
@@ -44,6 +44,9 @@ Everything runs on free or already-paid-for services: **n8n** (the workflow engi
 | RLS | Row Level Security | A database feature that limits what a given key can read or write. |
 | SRI | Subresource Integrity | A browser check that a downloaded script matches an expected hash. |
 | SSVC | Stakeholder-Specific Vulnerability Categorization | A decision framework for *what to do* about a vulnerability (the subject of the related thesis). |
+| CERT/CC | CERT Coordination Center (Carnegie Mellon University) | The team that publishes SSVC and its decision tables. |
+| ADP | Authorized Data Publisher | An organisation allowed to add data to CVE records. CISA's ADP data is called Vulnrichment. |
+| EOS | End of Support | The date a vendor stops shipping security fixes for a product version. |
 | IOC | Indicator of Compromise | A concrete attacker artefact — IP, domain, file hash. Not yet in scope (see roadmap). |
 
 # 2. Architecture
@@ -210,7 +213,24 @@ Run it before a demo or whenever you want evidence the data is right. It emails 
 
 Result on 6 Nov 2026: 0 missing, 0 mismatches, 15/15 CVSS match, 15/15 EPSS within tolerance, 20/20 links OK, 151/151 summaries sane.
 
-## 3.9 Execution history
+## 3.9 TI 08 – Vulnrichment (every 6 h, at :50)
+
+**In plain words:** CVSS says how bad a bug *could* be. CISA also publishes, for many CVEs, three plain answers about what is *actually* happening. This workflow collects those answers so the dashboard can show them and the SSVC layer (section 12) can use them.
+
+| Answer from CISA | Values | Meaning |
+|---|---|---|
+| Exploitation | none · poc · active | No known attacks · a public proof-of-concept exists · attackers are using it |
+| Automatable | no · yes | Can an attacker run the attack end to end with a script (worm-like)? |
+| Technical Impact | partial · total | Does a successful attack give partial or total control of the component? |
+
+How it runs: it takes up to 150 CVEs from `kev_entries` and `cve_watch` that were never checked, or not checked for 3 days. For each one it downloads the public file `cisagov/vulnrichment/<year>/<n>xxx/<CVE>.json` from GitHub (10 at a time, 1 s apart), reads the block marked `CISA-ADP` → `ssvc`, and writes the three answers with one call to the database function `ssvc_apply` (service key only).
+
+- **Not every CVE has been assessed.** If CISA has no file yet (HTTP 404), the row is marked `not_assessed` and the dashboard says "SSVC: not assessed by CISA". Any other error (rate limit, network) is skipped and retried next run, so a temporary fault never marks a CVE wrongly.
+- **Caution for research use:** CISA updates Exploitation when a CVE enters KEV. The stored value is "as of the last check", fine for today's triage but not for back-testing past decisions.
+
+Tested on real CISA files before deployment (an assessed KEV CVE, an assessed non-KEV CVE, a 404, and a server error): all four handled correctly.
+
+## 3.10 Execution history
 
 ![Executions](screenshots/n8n-executions.jpg)
 
@@ -224,9 +244,13 @@ Every run is kept in n8n (Executions tab) with the full data at each node, which
 | `cve_watch` | NVD CVE with CVSS ≥ 7 in our stack | `cve_id` (PK), `published_at`, `description`, CVSS/EPSS columns as above, `matched_vendor`, `cpe_vendors[]`, `cpe_products[]`, `batch_key`, `product_group`, `product_name`, `fixed_versions`, `advisory_url`, `remediation`, `ai_summary`, `ai_reason` |
 | `articles` | News / advisory item | `link` (PK), `title`, `source`, `published_at`, `summary`, `score`, `matched_terms[]`, `relevant`, `ai_verdict`, `ai_summary`, `ai_reason`, `product_group` |
 | `ticket_notes` | Day | `note_date` (PK), `note` (text), `counts` (json) |
-| `digest_log` | Workflow run | `sent_at`, `kind` (`kev`, `news-collect`, `news`, `cve-watch`, `kev-enrich`, `ai-summaries`, `ticket-note`), `item_count`, `payload` |
+| `digest_log` | Workflow run | `sent_at`, `kind` (`kev`, `news-collect`, `news`, `cve-watch`, `kev-enrich`, `ai-summaries`, `ticket-note`, `verify`, `vulnrichment`), `item_count`, `payload` |
+| `kev_entries`, `cve_watch` (added by migration 008) | — | `ssvc_exploitation`, `ssvc_automatable`, `ssvc_technical_impact`, `ssvc_status` (`assessed` / `not_assessed`), `ssvc_assessed_at` (CISA's date), `ssvc_checked_at` (our last check) |
+| `ssvc_deployer_decision` (007) | SSVC input combination (72 rows) | `exploitation`, `system_exposure`, `automatable`, `human_impact` → `outcome`. Copied from CERT/CC and checked 72/72. |
+| `demo_tenants`, `demo_devices`, `demo_software` (009) | Made-up client, device, installed software | Synthetic demo estate — see section 12. |
+| `demo_ssvc_decisions` (view, 009) | Device × CVE pair | Every input, the rule that produced it, the SSVC action, CVSS, EPSS, defaults used, out-of-support flag |
 
-All tables have Row Level Security enabled with a read-only policy for the public (anon) key. Writes happen only from n8n with the service key. Schema and migrations are in `supabase/` (`schema.sql`, `migration-002` … `migration-006`).
+All tables have Row Level Security enabled with a read-only policy for the public (anon) key. Writes happen only from n8n with the service key. Schema and migrations are in `supabase/` (`schema.sql`, `migration-002` … `migration-009`). The write function `ssvc_apply` can be called only with the service key; the public key gets "permission denied".
 
 # 5. The dashboard
 
@@ -265,13 +289,24 @@ Each tab has a **tile view** (cards: id, severity, product group, summary, actio
 
 Article badges: **kept** (keyword score and Claude both say relevant), **AI: skip** (keyword score kept it, Claude judged it not relevant), **dropped** (below the keyword threshold).
 
-## 5.3 Ticket note
+## 5.3 SSVC (demo) tab
+
+Shows, for a **made-up** estate of three clients, what SSVC would tell an engineer to do for each device × CVE pair, side by side with CVSS:
+
+- **Tiles:** how many pairs land in each SSVC action (immediate, out-of-cycle, scheduled, defer), how many have CVSS ≥ 7, how many used a CERT/CC default because CISA had no assessment, and how many sit on software past end of support.
+- **SSVC vs CVSS table:** highlighted cells are the interesting disagreements — CVSS high but SSVC says defer (time saved), or CVSS medium but SSVC says act now (risk caught).
+- **Why:** which rules fired (R1–R9, M1–M5, S1–S4), so every action can be traced.
+- **List:** each pair with its inputs and rule IDs. Pick a tenant or search to narrow.
+
+KEV and CVE Watch cards also show the CISA answers as a small chip ("SSVC · Exploitation active · Automatable no", or "SSVC: not assessed by CISA"). The pipeline strip has a ninth tile for TI 08.
+
+## 5.4 Ticket note
 
 ![Ticket note (live)](screenshots/dashboard-ticket-note-live.jpg)
 
 The latest TI 07 note with a one-click copy. It is plain text — it pastes cleanly into a ConnectWise ticket note.
 
-## 5.4 Mobile
+## 5.5 Mobile
 
 ![Mobile](screenshots/dashboard-mobile.png)
 
@@ -345,11 +380,12 @@ Safeguards:
 | Not covered today | Plan |
 |---|---|
 | AusCERT bulletins (member login, no public feed) | Add the member RSS token as an n8n credential. |
-| Indicators of Compromise (IPs, domains, hashes) | TI 09 – IOC feed (ThreatFox, URLhaus, Feodo Tracker, advisory appendices) → `iocs` table → dashboard tab → Sentinel / Defender indicator upload or KQL hunt. |
-| "Where do we have this?" — per-client exposure | TI 08 – NinjaOne inventory: pull device and software inventory per organisation, match against KEV / CVE Watch → "CVE-x affects 14 devices across 3 clients" → patch plan priority. Needs a NinjaOne API app and approval. |
+| Indicators of Compromise (IPs, domains, hashes) | TI 10 – IOC feed (ThreatFox, URLhaus, Feodo Tracker, advisory appendices) → `iocs` table → dashboard tab → Sentinel / Defender indicator upload or KQL hunt. |
+| "Where do we have this?" — per-client exposure | TI 09 – NinjaOne inventory (replaces the demo estate in section 12): pull device and software inventory per organisation, match against KEV / CVE Watch → "CVE-x affects 14 devices across 3 clients" → patch plan priority. Needs a NinjaOne API app and approval. |
 | Microsoft Teams delivery | Swap the email node for the Teams webhook once a channel is available. |
 | Dashboard login | Supabase Auth + RLS by user, if the link must be restricted. |
-| Decision logic | Feed Exploitation (KEV/EPSS), Technical Impact (CVSS) and tenant exposure into an SSVC decision tree — the research component. |
+| Decision logic on real clients | Built and demonstrated on a made-up estate (section 12). Running it on real client data needs Matt's written approval, anonymised tenant IDs, and the NinjaOne feed. |
+| Version-aware matching | The demo matches software by name only. Real use needs version ranges (CPE `versionStartIncluding` / `versionEndExcluding`). |
 
 # 11. Repository structure
 
@@ -366,6 +402,7 @@ threat-intel-pipeline/
 │   ├── 05-kev-enrich.json          2-hourly: back-fill CVSS, EPSS, remediation, summaries on KEV rows
 │   ├── 06-ai-summaries.json        hourly: Claude summary + relevance verdict for articles
 │   ├── 07-ticket-note.json         weekdays: plain-text ticket note → email + ticket_notes table
+│   ├── 08-vulnrichment.json        6-hourly: CISA Vulnrichment SSVC answers → kev_entries / cve_watch
 │   └── snippets/                   the Code-node JavaScript as readable .js files
 ├── supabase/
 │   ├── schema.sql                  tables kev_entries, articles, digest_log + RLS policies
@@ -373,7 +410,10 @@ threat-intel-pipeline/
 │   ├── migration-003-batch-key.sql browser release batching
 │   ├── migration-004-groups-ai.sql product_group, ai_summary, ai_reason
 │   ├── migration-005-ticket-notes.sql  ticket_notes table
-│   └── migration-006-remediation.sql   product_name, fixed_versions, advisory_url, remediation
+│   ├── migration-006-remediation.sql   product_name, fixed_versions, advisory_url, remediation
+│   ├── migration-007-ssvc-decision.sql CERT/CC deployer table + ssvc_decide() + ssvc_human_impact()
+│   ├── migration-008-vulnrichment.sql  SSVC columns + ssvc_apply() (service key only)
+│   └── migration-009-demo-estate.sql   made-up tenants/devices/software + demo_ssvc_decisions view
 ├── dashboard/
 │   └── index.html                  the whole dashboard (HTML + CSS + JS); keys blank in git
 └── docs/
@@ -383,3 +423,77 @@ threat-intel-pipeline/
 ```
 
 **Conventions.** Workflow names are `TI nn – Name`; every workflow starts with Schedule → Config and ends with Log run. Node names are plain English and are referenced by name in code (`$('Config').first().json`), so renaming a node requires updating the code that reads it. Secrets never go in the repo: the Config node in git says `YOUR-PROJECT`, `YOUR-SERVICE-ROLE-KEY`; the live values exist only in n8n on the laptop.
+
+# 12. The SSVC decision layer (Phase 5) — explained slowly
+
+## 12.1 The idea in one paragraph
+
+CVSS (Common Vulnerability Scoring System) answers "how bad is this bug in general?". It does not know *your* device. SSVC (Stakeholder-Specific Vulnerability Categorization) answers a different question: "what should *we* do about it, on *this* device, now?". It asks four questions and looks the answers up in a fixed table published by CERT/CC. The result is one of four actions:
+
+| Action | Plain meaning |
+|---|---|
+| **immediate** | Drop other work; patch or mitigate now. |
+| **out-of-cycle** | Patch before the next normal patch window. |
+| **scheduled** | Patch in the normal patch cycle. |
+| **defer** | No action for now; look again later. |
+
+## 12.2 The four questions and where each answer comes from
+
+| Question | Who answers it | In this platform |
+|---|---|---|
+| **Exploitation** — are attackers using it? | CISA (public) | TI 08 → `ssvc_exploitation` |
+| **Automatable** — can it be attacked by script, end to end? | CISA (public) | TI 08 → `ssvc_automatable` |
+| **System Exposure** — how reachable is *this device*? | Us (device facts) | Rules R1–R9 |
+| **Human Impact** — how much does it matter if *this device* fails? | Us (business function + sector) | Mission rules M1–M5 + Safety rules S1–S4, combined by the CERT/CC Human Impact table |
+
+The first two are the same for everyone. The last two are different for every client and every device — that is exactly the part CISA cannot do for us, and the part this layer automates.
+
+## 12.3 The rules (same IDs as the thesis)
+
+The rules are copied from the thesis repository's executable SQL (`ssvc-environmental-automation`, views 01–04, estate v5). They are checked first-match-wins, top to bottom.
+
+**System Exposure** — small / controlled / open
+
+| ID | If… | Then |
+|---|---|---|
+| R1 | No external-scan data **and** no public-IP data | open (safe default) |
+| R2 | Seen in an external scan | open |
+| R3 | In a DMZ, public cloud or perimeter zone | open |
+| R4 | Workstation / BYOD, client posture basic or developing, **not** managed by the MSSP | open |
+| R5 | CISA says Automatable = yes | controlled |
+| R6 | Reachable from user or guest VLANs | controlled |
+| R7 | Needs authentication, or only behind VPN / SASE | controlled |
+| R8 | Strict segmentation, not reachable from user/guest VLANs, no public IP | small |
+| R9 | Anything else | controlled |
+
+**Mission Impact** — M1 organisation-wide functions (core switching, virtualisation) → mission failure; M2 the function *is* an essential function for that sector → MEF (Mission Essential Function) failure; M3 directly supports essential functions → MEF support crippled; M4 non-essential → degraded; M5 unknown → MEF support crippled (CERT/CC default).
+
+**Safety Impact** — S1 critical (e.g. clinical systems in healthcare, production-line control in manufacturing); S2 marginal (e.g. building management); S4 unknown function → marginal; S3 everything else → negligible.
+
+**Human Impact** then comes from the CERT/CC table (DT_HI 1.0.0) using Mission + Safety.
+
+If CISA has not assessed a CVE yet, SSVC uses the CERT/CC defaults (Exploitation none, Automatable yes) and the dashboard shows "default used", so those rows can be treated with less confidence.
+
+## 12.4 How it was checked
+
+| Check | Result |
+|---|---|
+| Decision table vs CERT/CC CSV (`deployer_patch_application_priority_1_0_0.csv`) | 72 / 72 rows identical |
+| Rules here vs the thesis views, on 4,000 random devices (every sector, function, posture and null case) | 0 differences in Exposure, Mission, Safety and Human Impact; all 9 + 5 + 4 rule IDs exercised |
+| Migrations 007–009 run twice on a clean Postgres | No errors (safe to re-run) |
+| Public (anon) key | Can read the demo view; cannot call `ssvc_apply` |
+
+## 12.5 Ground rules (kept on purpose)
+
+1. **Two databases, always.** This platform's Supabase and the thesis research database never connect. Nothing here reads or writes research data.
+2. **The demo estate is invented.** `tenant_01` (a clinic group), `tenant_02` (a factory) and `tenant_03` (an accounting firm) do not exist. No client data is in this repository.
+3. **Client data stays Subnet's.** Using real client inventory (via NinjaOne, TI 09) needs Matt's written approval; for thesis use it must also be anonymised to `tenant_nn` IDs.
+4. **This platform is a demonstration, not thesis evidence.** Thesis results come only from the research database and its pre-registered method.
+5. **Matching is by product name only.** A row means "check this device", not "this device is vulnerable".
+
+## 12.6 Turning it on (one-time)
+
+1. In the Supabase SQL editor, run `migration-007-ssvc-decision.sql`, then `migration-008-vulnrichment.sql`, then `migration-009-demo-estate.sql`.
+2. In n8n, import `n8n/08-vulnrichment.json`, paste the live Config from TI 01 into its Config node, pick the **TI run token** credential on the *Run now* node, and publish.
+3. Run TI 08 once (n8n, or the dashboard's *Run now*). The SSVC chips and the SSVC (demo) tab fill in after it finishes.
+
