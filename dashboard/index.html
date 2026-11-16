@@ -324,7 +324,7 @@ footer { color: var(--muted); font-size: 12px; margin-top: 24px; }
 const SUPABASE_URL = "https://wpxxcuncbduchwicsysn.supabase.co";          // e.g. https://abcd1234.supabase.co
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndweHhjdW5jYmR1Y2h3aWNzeXNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM4ODM4NTEsImV4cCI6MjEwOTQ1OTg1MX0.GzsojSZPDJJtS_0h8n8xIUyXzEhPs341YK682fxbrbc";     // anon / publishable key only – never the service role key
 const N8N_RUN_BASE = "http://localhost:5678";          // e.g. http://localhost:5678 (or the tunnel URL) – leave empty to hide the Run buttons
-const RUN_TOKEN = "<the tirun_… value from .tiw_cfg.local>";             // value of the n8n "TI run token" header credential (x-run-token)
+const RUN_TOKEN = "";             // leave EMPTY in git: the dashboard asks for the token once and keeps it only in that browser
 // ==================================================
 
 const SIGNALS = new Set(["zero-day","0-day","actively exploited","in the wild","exploited","ransomware","critical","rce","remote code execution","authentication bypass","patch now","emergency","out-of-band","cve-","australia","australian","msp","mssp","rmm","supply chain","phishing","data breach","chromium-edge-batch"]);
@@ -469,18 +469,33 @@ function renderPipeline() {
   $("#runsNote").textContent = data.runs.length ? `${data.runs.length} runs logged` : "";
   $$("#pipe .run").forEach(b => b.addEventListener("click", () => runNow(b.dataset.kind, b)));
 }
-function canRun() { return !!(N8N_RUN_BASE && RUN_TOKEN); }
+function canRun() { return !!N8N_RUN_BASE; }
+// The run token is a secret, so it is never shipped in the page. Each person enters it once; it stays in their browser only.
+const validToken = (t) => /^[\x21-\x7e]{8,200}$/.test(t || "");   // printable ASCII only (HTTP headers cannot carry other characters)
+function getToken(ask) {
+  let t = validToken(RUN_TOKEN) ? RUN_TOKEN : "";
+  if (!t) { try { t = localStorage.getItem("tiw.runToken") || ""; } catch {} }
+  if (!validToken(t) && ask) {
+    t = (window.prompt("Run token (the n8n 'TI run token' value, starts with tirun_). It is kept only in this browser.") || "").trim();
+    if (!validToken(t)) return "";
+    try { localStorage.setItem("tiw.runToken", t); } catch {}
+  }
+  return validToken(t) ? t : "";
+}
 function onCooldown(kind) { try { const t = Number(localStorage.getItem("tiw.run." + kind) || 0); return now() - t < RUN_COOLDOWN_MIN * 60000; } catch { return false; } }
 async function runNow(kind, btn) {
   if (!canRun() || onCooldown(kind)) return;
+  const token = getToken(true);
+  if (!token) { btn.lastChild.textContent = "no token"; setTimeout(() => btn.lastChild.textContent = "Run now", 3000); return; }
   btn.disabled = true; btn.lastChild.textContent = "starting…";
   try {
-    const r = await fetch(`${N8N_RUN_BASE.replace(/\/+$/, "")}/webhook/ti-run/${encodeURIComponent(kind)}`, { method: "POST", headers: { "x-run-token": RUN_TOKEN } });
+    const r = await fetch(`${N8N_RUN_BASE.replace(/\/+$/, "")}/webhook/ti-run/${encodeURIComponent(kind)}`, { method: "POST", headers: { "x-run-token": token } });
+    if (r.status === 401 || r.status === 403) { try { localStorage.removeItem("tiw.runToken"); } catch {} throw new Error("wrong token"); }
     if (!r.ok) throw new Error("HTTP " + r.status);
     try { localStorage.setItem("tiw.run." + kind, String(now())); } catch {}
     btn.lastChild.textContent = "queued";
     setTimeout(load, 45000);
-  } catch (e) { btn.disabled = false; btn.lastChild.textContent = "failed (" + e.message + ")"; setTimeout(() => btn.lastChild.textContent = "Run now", 4000); }
+  } catch (e) { btn.disabled = false; btn.lastChild.textContent = /fetch/i.test(e.message) ? "n8n not reachable" : "failed: " + e.message; setTimeout(() => btn.lastChild.textContent = "Run now", 4000); }
 }
 
 // ----- filtering
