@@ -408,6 +408,16 @@ async function sb(path) {
   return r.json();
 }
 
+// Supabase returns at most 1000 rows per request; page through larger results.
+async function sbAll(path, max = 10000) {
+  const out = [];
+  for (let off = 0; off < max; off += 1000) {
+    const page = await sb(`${path}&limit=1000&offset=${off}`);
+    out.push(...page); if (page.length < 1000) break;
+  }
+  return out;
+}
+
 async function load() {
   const live = SUPABASE_URL && SUPABASE_ANON_KEY;
   $("#demoNotice").hidden = !!live;
@@ -422,7 +432,7 @@ async function load() {
         sb(`articles?published_at=gte.${since}&order=score.desc,published_at.desc&limit=1000`),
         sb(`digest_log?order=sent_at.desc&limit=200`).catch(() => []),
         sb(`ticket_notes?order=note_date.desc&limit=7`).catch(() => []),
-        sb(`demo_ssvc_decisions?select=tenant_id,sector,device_id,business_function,software,software_version,out_of_support,source,cve_id,product_label,cvss_score,cvss_severity,epss_score,seen_at,system_exposure,exposure_rule_id,mission_impact,mission_rule_id,safety_impact,safety_rule_id,human_impact,ssvc_action,ssvc_exploitation_used,ssvc_automatable_used,defaults_used,ssvc_status&limit=5000`).catch(() => []),
+        sbAll(`demo_ssvc_decisions?select=tenant_id,sector,device_id,business_function,software,software_version,out_of_support,source,cve_id,product_label,cvss_score,cvss_severity,epss_score,seen_at,system_exposure,exposure_rule_id,mission_impact,mission_rule_id,safety_impact,safety_rule_id,human_impact,ssvc_action,ssvc_exploitation_used,ssvc_automatable_used,defaults_used,ssvc_status&order=tenant_id,device_id,cve_id`).catch(() => []),
       ]);
       data = { kev, watch, articles, runs, notes, ssvc };
     } else data = { ...SAMPLE, ssvc: [] };
