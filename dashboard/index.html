@@ -5,56 +5,64 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Threat Intel Watch</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fira+Sans:wght@400;500;600&family=Fira+Code:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@500;600&family=JetBrains+Mono:wght@400;500&display=swap">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js" integrity="sha384-dug+JxfBvklEQdJ4AYuBBAIScUz0bVN73xpy273gcAwHjb3qI0fXmuYNaNfdyYJG" crossorigin="anonymous"></script>
 <style>
 /* Minimal / Swiss, dense dashboard. Dark default, light supported. Tokens on :root. */
 :root {
-  --bg: #0b0f14; --panel: #121820; --panel2: #171f28; --fg: #e8edf2; --muted: #8a97a6; --line: #232d38; --line2: #2d3947;
-  --accent: #3ddc97; --accent-ink: #04140c; --accent-soft: rgba(61,220,151,.12);
-  --crit: #ff6565; --high: #ff9a3c; --med: #f3c74b; --low: #52d28d; --info: #5eb3ff;
-  --chip: #1b242e; --chip-on: #3ddc97; --chip-on-ink: #04140c;
-  --mono: "Fira Code", ui-monospace, Menlo, Consolas, monospace;
-  --sans: "Fira Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --shadow: 0 1px 0 rgba(255,255,255,.03) inset, 0 10px 30px rgba(0,0,0,.28);
-  --r: 10px; --t: 200ms cubic-bezier(.2,.7,.2,1);
+  /* SOC console: deep navy panels, cyan for data, severity colours carry meaning only */
+  --bg: #0a1128; --panel: #111a36; --panel2: #16214a; --fg: #e7ecf8; --muted: #8e9bbf; --line: #1f2c58; --line2: #2c3d75;
+  --accent: #36d6e7; --accent-ink: #04161a; --accent-soft: rgba(54,214,231,.12);
+  --crit: #ff4f6e; --high: #ff9a3d; --med: #f7d046; --low: #7ee0a1; --info: #6aa8ff; --violet: #9b7bff;
+  --chip: #1a2652; --chip-on: #36d6e7; --chip-on-ink: #04161a;
+  --mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+  --sans: "Barlow", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --cond: "Barlow Condensed", "Barlow", system-ui, sans-serif;
+  --shadow: 0 1px 0 rgba(255,255,255,.03) inset, 0 12px 28px rgba(2,6,23,.45);
+  --r: 12px; --t: 180ms cubic-bezier(.2,.7,.2,1); --side: 228px;
   color-scheme: dark;
 }
 @media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) {
-  --bg: #f4f6f8; --panel: #ffffff; --panel2: #f7f9fb; --fg: #161c22; --muted: #5b6774; --line: #dde3ea; --line2: #cfd7e0;
-  --accent: #0f7f5a; --accent-ink: #ffffff; --accent-soft: rgba(15,127,90,.10);
-  --crit: #c62828; --high: #d9531e; --med: #a36d00; --low: #2e7d4f; --info: #1f6fd0;
-  --chip: #eaeef2; --chip-on: #0f7f5a; --chip-on-ink: #ffffff; --shadow: 0 1px 2px rgba(16,24,40,.06), 0 6px 18px rgba(16,24,40,.05);
+  --bg: #eef2f9; --panel: #ffffff; --panel2: #f4f7fc; --fg: #121a33; --muted: #56627f; --line: #dbe2ef; --line2: #c6d0e3;
+  --accent: #0b8fa0; --accent-ink: #ffffff; --accent-soft: rgba(11,143,160,.10);
+  --crit: #d32f4c; --high: #d4661a; --med: #a77d00; --low: #2b8a57; --info: #2563c9; --violet: #6b4fd8;
+  --chip: #e8edf6; --chip-on: #0b8fa0; --chip-on-ink: #ffffff; --shadow: 0 1px 2px rgba(16,24,40,.06), 0 8px 20px rgba(16,24,40,.06);
   color-scheme: light; } }
 :root[data-theme="light"] {
-  --bg: #f4f6f8; --panel: #ffffff; --panel2: #f7f9fb; --fg: #161c22; --muted: #5b6774; --line: #dde3ea; --line2: #cfd7e0;
-  --accent: #0f7f5a; --accent-ink: #ffffff; --accent-soft: rgba(15,127,90,.10);
-  --crit: #c62828; --high: #d9531e; --med: #a36d00; --low: #2e7d4f; --info: #1f6fd0;
-  --chip: #eaeef2; --chip-on: #0f7f5a; --chip-on-ink: #ffffff; --shadow: 0 1px 2px rgba(16,24,40,.06), 0 6px 18px rgba(16,24,40,.05);
+  --bg: #eef2f9; --panel: #ffffff; --panel2: #f4f7fc; --fg: #121a33; --muted: #56627f; --line: #dbe2ef; --line2: #c6d0e3;
+  --accent: #0b8fa0; --accent-ink: #ffffff; --accent-soft: rgba(11,143,160,.10);
+  --crit: #d32f4c; --high: #d4661a; --med: #a77d00; --low: #2b8a57; --info: #2563c9; --violet: #6b4fd8;
+  --chip: #e8edf6; --chip-on: #0b8fa0; --chip-on-ink: #ffffff; --shadow: 0 1px 2px rgba(16,24,40,.06), 0 8px 20px rgba(16,24,40,.06);
   color-scheme: light; }
 
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
 html, body { margin: 0; }
-body { background: var(--bg); color: var(--fg); font: 14px/1.5 var(--sans);
-  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 0 48px; }
+body { background: var(--bg); color: var(--fg); font: 14.5px/1.5 var(--sans); }
+body::before { content: ""; position: fixed; inset: 0; pointer-events: none; z-index: -1;
+  background: radial-gradient(900px 500px at 85% -10%, rgba(54,214,231,.07), transparent 60%), radial-gradient(700px 500px at -10% 110%, rgba(155,123,255,.07), transparent 60%); }
 a { color: inherit; }
 h1, h2, h3 { margin: 0; text-wrap: balance; }
-h1 { font-size: 17px; font-weight: 600; letter-spacing: .01em; }
-h2 { font-size: 13.5px; font-weight: 600; }
-.wrap { max-width: 1320px; margin: 0 auto; }
+h1 { font: 600 22px/1.15 var(--cond); letter-spacing: .01em; }
+h2 { font: 600 16px/1.2 var(--cond); letter-spacing: .015em; }
+.app { display: grid; grid-template-columns: var(--side) minmax(0, 1fr); min-height: 100vh; }
+.side { position: sticky; top: 0; height: 100vh; border-right: 1px solid var(--line); background: color-mix(in srgb, var(--panel) 82%, transparent); backdrop-filter: blur(6px); display: flex; flex-direction: column; padding: 16px 12px; gap: 14px; }
+.main { min-width: 0; padding: 0 max(16px, env(safe-area-inset-right, 0px)) 48px 22px; }
+.wrap { max-width: 1440px; margin: 0 auto; }
 .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
 .muted { color: var(--muted); }
-.label { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 500; }
+.label { font-size: 12.5px; color: var(--muted); font-weight: 500; }
 button { font: inherit; cursor: pointer; color: inherit; }
 svg.i { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 /* header */
-header { display: flex; flex-wrap: wrap; gap: 10px 20px; align-items: center; justify-content: space-between; padding-block: 14px 10px; }
-.brand { display: flex; align-items: center; gap: 10px; }
-.logo { width: 30px; height: 30px; border-radius: 8px; background: var(--accent-soft); color: var(--accent); display: grid; place-items: center; border: 1px solid var(--line); }
-.brand .sub { font-size: 12px; color: var(--muted); }
+header { display: flex; flex-wrap: wrap; gap: 10px 20px; align-items: center; justify-content: space-between; padding-block: 16px 12px; }
+header .page { display: grid; gap: 2px; }
+.brand { display: flex; align-items: center; gap: 10px; padding: 2px 6px 10px; border-bottom: 1px solid var(--line); }
+.brand b { font: 600 18px/1.1 var(--cond); letter-spacing: .02em; display: block; }
+.logo { width: 34px; height: 34px; border-radius: 10px; flex: none; background: var(--accent-soft); color: var(--accent); display: grid; place-items: center; border: 1px solid var(--line); }
+.brand .sub, header .sub { font-size: 12.5px; color: var(--muted); }
 .hdr-actions { display: flex; gap: 8px; align-items: center; }
 .mode { display: inline-flex; align-items: center; gap: 6px; font-family: var(--mono); font-size: 11.5px; color: var(--muted); padding: 4px 10px; border: 1px solid var(--line); border-radius: 999px; }
 .mode .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
@@ -67,15 +75,17 @@ header { display: flex; flex-wrap: wrap; gap: 10px 20px; align-items: center; ju
 .notice code { font-family: var(--mono); }
 
 /* pipeline status strip */
-.pipe { display: grid; grid-template-columns: repeat(auto-fit, minmax(148px, 1fr)); gap: 8px; margin-block: 6px 14px; }
+.pipe { display: grid; grid-template-columns: repeat(auto-fit, minmax(116px, 1fr)); gap: 0; margin-block: 6px 14px; background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); box-shadow: var(--shadow); }
 .pipe-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 4px; }
-.pt { position: relative; background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 10px 12px; display: grid; gap: 2px; box-shadow: var(--shadow); cursor: default; transition: border-color var(--t), transform var(--t); }
-.pt:hover, .pt:focus-within { border-color: var(--line2); transform: translateY(-1px); z-index: 25; }
-.pt .nm { display: flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 500; }
+.pt { position: relative; padding: 10px 12px; display: grid; gap: 2px; cursor: default; border-right: 1px solid var(--line); transition: background var(--t); }
+.pt:last-child { border-right: 0; }
+.pt:hover, .pt:focus-within { background: var(--panel2); z-index: 25; }
+.pt .nm { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; }
 .pt .st { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex: none; }
-.pt .st.ok { background: var(--low); box-shadow: 0 0 0 3px rgba(82,210,141,.18); }
+.pt .st.ok { background: var(--low); box-shadow: 0 0 0 3px rgba(126,224,161,.18); animation: pulse 2.4s ease-in-out infinite; }
+@keyframes pulse { 50% { box-shadow: 0 0 0 5px rgba(126,224,161,.05); } }
 .pt .st.late { background: var(--med); } .pt .st.err { background: var(--crit); }
-.pt .ago { font-family: var(--mono); font-size: 12px; }
+.pt .ago { font: 600 17px/1.15 var(--cond); }
 .pt .sch { font-size: 11px; color: var(--muted); }
 .pt .run { margin-top: 4px; align-self: start; font-size: 11.5px; padding: 3px 8px; border-radius: 6px; border: 1px solid var(--line); background: var(--panel2); color: var(--fg); display: inline-flex; align-items: center; gap: 4px; transition: border-color var(--t), background var(--t); }
 .pt .run:hover:not([disabled]) { border-color: var(--accent); color: var(--accent); }
@@ -87,14 +97,19 @@ header { display: flex; flex-wrap: wrap; gap: 10px 20px; align-items: center; ju
 .pt .pop .hist { border-top: 1px solid var(--line); margin-top: 4px; padding-top: 4px; font-family: var(--mono); font-size: 11px; color: var(--muted); display: grid; gap: 2px; }
 
 /* tabs */
-.tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--line); margin-block: 4px 12px; overflow-x: auto; }
-.tab { background: transparent; border: 0; color: var(--muted); padding: 10px 14px; border-bottom: 2px solid transparent; white-space: nowrap; font-weight: 500; display: inline-flex; align-items: center; gap: 6px; transition: color var(--t), border-color var(--t); }
-.tab:hover { color: var(--fg); }
-.tab[aria-selected="true"] { color: var(--fg); border-bottom-color: var(--accent); }
-.tab .n { font-family: var(--mono); font-size: 11px; background: var(--chip); padding: 1px 7px; border-radius: 10px; color: var(--fg); }
+.tabs { display: grid; gap: 2px; }
+.nav-h { font-size: 12px; color: var(--muted); padding: 10px 10px 4px; }
+.tab { background: transparent; border: 0; color: var(--muted); padding: 8px 10px; border-radius: 9px; white-space: nowrap; font-weight: 500; font-size: 14px; display: flex; align-items: center; gap: 10px; text-align: left; position: relative; transition: color var(--t), background var(--t); }
+.tab:hover { color: var(--fg); background: var(--panel2); }
+.tab[aria-selected="true"] { color: var(--fg); background: var(--accent-soft); }
+.tab[aria-selected="true"]::before { content: ""; position: absolute; left: -12px; top: 8px; bottom: 8px; width: 3px; border-radius: 0 3px 3px 0; background: var(--accent); }
+.tab[aria-selected="true"] svg.i { color: var(--accent); }
+.tab .n { margin-left: auto; font: 500 11px var(--mono); background: var(--chip); padding: 1px 7px; border-radius: 10px; color: var(--fg); }
+.side-foot { margin-top: auto; font-size: 12px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 10px; display: grid; gap: 6px; }
+.side-foot .row { display: flex; align-items: center; gap: 8px; }
 
 /* filter panel */
-.filters { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); padding-block: 6px 8px; margin-bottom: 12px; }
+.filters { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 10; background: color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter: blur(6px); padding-block: 6px 8px; margin-bottom: 12px; }
 .fbar { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 8px 10px; display: grid; gap: 8px; box-shadow: var(--shadow); }
 .frow { display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center; }
 .search { flex: 1 1 220px; display: flex; align-items: center; gap: 6px; background: var(--panel2); border: 1px solid var(--line); border-radius: 8px; padding: 0 10px; color: var(--muted); transition: border-color var(--t); }
@@ -133,20 +148,50 @@ header { display: flex; flex-wrap: wrap; gap: 10px 20px; align-items: center; ju
 
 /* overview */
 .strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin-bottom: 12px; }
-.tile { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 12px 14px; display: grid; gap: 2px; box-shadow: var(--shadow); position: relative; overflow: hidden; transition: border-color var(--t); }
+.tile { background: linear-gradient(180deg, color-mix(in srgb, var(--tile-bar, var(--accent)) 9%, var(--panel)), var(--panel) 70%); border: 1px solid var(--line); border-radius: var(--r); padding: 12px 14px 12px 16px; display: grid; gap: 2px; box-shadow: var(--shadow); position: relative; overflow: hidden; transition: border-color var(--t); }
 .tile:hover { border-color: var(--line2); }
 .tile::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--tile-bar, var(--accent)); }
-.tile .n { font: 500 26px/1.1 var(--mono); font-variant-numeric: tabular-nums; }
+.tile .n { font: 600 36px/1.05 var(--cond); font-variant-numeric: tabular-nums; color: var(--tile-num, var(--fg)); }
 .tile .sub { color: var(--muted); font-size: 12px; }
-.tile.crit { --tile-bar: var(--crit); } .tile.high { --tile-bar: var(--high); } .tile.med { --tile-bar: var(--med); } .tile.info { --tile-bar: var(--info); }
+.tile.crit { --tile-bar: var(--crit); --tile-num: var(--crit); } .tile.high { --tile-bar: var(--high); --tile-num: var(--high); } .tile.med { --tile-bar: var(--med); } .tile.info { --tile-bar: var(--info); } .tile.violet { --tile-bar: var(--violet); }
 .charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 8px; margin-bottom: 12px; }
-.card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 12px 14px; box-shadow: var(--shadow); min-width: 0; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 14px 16px; box-shadow: var(--shadow); min-width: 0; }
+.card .hd { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+.card .hd h2 { margin: 0; }
+.dash { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 10px; margin-bottom: 12px; }
+.s3 { grid-column: span 3; } .s4 { grid-column: span 4; } .s5 { grid-column: span 5; } .s6 { grid-column: span 6; } .s7 { grid-column: span 7; } .s8 { grid-column: span 8; } .s12 { grid-column: span 12; }
+.sumgrid { display: grid; grid-template-columns: 190px minmax(0, 1fr); min-width: 0; gap: 16px; align-items: center; }
+.donut { position: relative; height: 190px; }
+.donut .c { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; pointer-events: none; }
+.donut .c b { display: block; font: 600 40px/1 var(--cond); } .donut .c span { font-size: 12px; color: var(--muted); }
+#sevTable { min-width: 0; overflow-x: auto; }
+.sevt { width: 100%; min-width: 0; border-collapse: separate; border-spacing: 0 3px; font-size: 13px; }
+.sevt th { background: transparent; cursor: default; padding: 4px 8px; text-align: right; font-size: 12px; color: var(--muted); text-transform: none; letter-spacing: 0; border: 0; }
+.sevt th:first-child, .sevt td:first-child { text-align: left; }
+.sevt td { padding: 5px 8px; text-align: right; border: 0; font-variant-numeric: tabular-nums; background: var(--panel2); }
+.sevt td:first-child { border-radius: 6px 0 0 6px; font-weight: 600; box-shadow: inset 4px 0 0 var(--sw, var(--muted)); padding-left: 12px; }
+.sevt td:last-child { border-radius: 0 6px 6px 0; font-weight: 600; }
+.sevt tr.tot td { background: transparent; border-top: 1px solid var(--line); }
+.disp { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0; }
+.disp > div { padding: 4px 10px; border-right: 1px solid var(--line); display: grid; gap: 2px; }
+.disp > div:last-child { border-right: 0; }
+.disp b { font: 600 34px/1 var(--cond); color: var(--dc, var(--fg)); } .disp .pc { font: 600 15px var(--cond); } .disp .lb { font-size: 12px; color: var(--muted); }
+.vlist { display: grid; gap: 2px; }
+.vrow { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 7px 8px; border-radius: 8px; }
+.vrow:hover { background: var(--panel2); }
+.vrow .rk { font: 600 15px var(--cond); color: var(--muted); text-align: right; }
+.vrow a { font-family: var(--mono); font-size: 12.5px; } .vrow .pd { font-size: 12.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vrow .ev { font: 600 20px/1 var(--cond); color: var(--accent); text-align: right; }
+.vrow .ev small { display: block; font: 500 10.5px var(--sans); color: var(--muted); }
+.mapframe { position: relative; border-radius: 10px; overflow: hidden; background: #030712; border: 1px solid var(--line); }
+.mapframe iframe { display: block; width: 100%; height: 100%; border: 0; }
+.mapnote { font-size: 12px; color: var(--muted); margin-top: 8px; }
 .card h2 { margin-bottom: 8px; }
-.card .chartbox { position: relative; height: 190px; }
-.prio { display: grid; gap: 6px; }
+.card .chartbox { position: relative; height: 210px; }
+.prio { display: grid; gap: 6px; max-height: 470px; overflow: auto; }
 .prio-row { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel2); }
 .prio-row .why { color: var(--muted); font-size: 12px; }
-.stories { display: grid; gap: 6px; }
+.stories { display: grid; gap: 6px; max-height: 470px; overflow: auto; padding-right: 2px; }
 .story { padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel2); display: grid; gap: 4px; }
 .story .hd { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: baseline; }
 .story .hd a { font-weight: 500; }
@@ -203,7 +248,16 @@ tr.rw td:first-child { box-shadow: inset 3px 0 0 var(--crit); }
 .count { font-family: var(--mono); font-size: 12px; color: var(--muted); }
 pre.note { white-space: pre-wrap; font-family: inherit; font-size: 13px; line-height: 1.5; border: 1px solid var(--line); border-radius: var(--r); padding: 14px; max-height: 70vh; overflow: auto; background: var(--panel); margin: 0; }
 footer { color: var(--muted); font-size: 12px; margin-top: 24px; }
-@media (max-width: 640px) { table { min-width: 640px; } .tile .n { font-size: 22px; } .card .chartbox { height: 160px; } .dates input { width: 118px; } .pt .pop { left: auto; right: 0; } }
+@media (max-width: 1100px) { .s3, .s4, .s5, .s7, .s8 { grid-column: span 6; } }
+@media (max-width: 860px) {
+  .app { grid-template-columns: 1fr; }
+  .side { position: sticky; top: 0; z-index: 40; height: auto; flex-direction: row; align-items: center; padding: 8px 12px; gap: 8px; border-right: 0; border-bottom: 1px solid var(--line); overflow-x: auto; }
+  .brand { border: 0; padding: 0; } .brand b, .brand .sub, .nav-h, .side-foot { display: none; }
+  .tabs { display: flex; } .tab { padding: 6px 10px; } .tab[aria-selected="true"]::before { display: none; }
+  .main { padding: 0 16px 40px; } .filters { top: 54px; }
+  .s3, .s4, .s5, .s6, .s7, .s8 { grid-column: span 12; } .sumgrid { grid-template-columns: minmax(0, 1fr); } .donut { max-width: 220px; margin: 0 auto; width: 100%; } .disp { grid-template-columns: repeat(2, 1fr); row-gap: 10px; }
+}
+@media (max-width: 640px) { .dd .menu { position: fixed; left: 16px; right: 16px; top: auto; max-width: none; margin-top: 6px; } table { min-width: 640px; } .tile .n { font-size: 22px; } .card .chartbox { height: 160px; } .dates input { width: 118px; } .pt .pop { left: auto; right: 0; } }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } .pt:hover, .g:hover { transform: none; } }
 </style>
 </head>
@@ -219,13 +273,40 @@ footer { color: var(--muted); font-size: 12px; margin-top: 24px; }
   <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></symbol>
   <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
   <symbol id="i-play" viewBox="0 0 24 24"><path d="M7 5l12 7-12 7z"/></symbol>
+  <symbol id="i-dash" viewBox="0 0 24 24"><rect x="3" y="3" width="8" height="10" rx="1.5"/><rect x="13" y="3" width="8" height="6" rx="1.5"/><rect x="13" y="11" width="8" height="10" rx="1.5"/><rect x="3" y="15" width="8" height="6" rx="1.5"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 3l10 18H2L12 3z"/><path d="M12 10v5M12 18h.01"/></symbol>
+  <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="i-news" viewBox="0 0 24 24"><rect x="3" y="4" width="14" height="16" rx="2"/><path d="M17 8h3v10a2 2 0 0 1-2 2M7 8h6M7 12h6M7 16h4"/></symbol>
+  <symbol id="i-scale" viewBox="0 0 24 24"><path d="M12 3v18M7 21h10M5 7h14M5 7l-3 6a3 3 0 0 0 6 0L5 7zM19 7l-3 6a3 3 0 0 0 6 0l-3-6z"/></symbol>
+  <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></symbol>
+  <symbol id="i-note" viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1M9 10h6M9 14h6M9 18h3"/></symbol>
   <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 10v6M12 7h.01"/></symbol>
 </svg>
+<div class="app">
+<aside class="side">
+  <div class="brand"><span class="logo"><svg class="i"><use href="#i-shield"/></svg></span><div><b>Threat Intel Watch</b><span class="sub">MSSP vulnerability console</span></div></div>
+  <nav class="tabs" role="tablist" aria-label="Sections">
+    <span class="nav-h">Monitor</span>
+    <button class="tab" role="tab" data-tab="overview" aria-selected="true"><svg class="i"><use href="#i-dash"/></svg>Overview</button>
+    <button class="tab" role="tab" data-tab="map"><svg class="i"><use href="#i-globe"/></svg>Live attack map</button>
+    <span class="nav-h">Vulnerabilities</span>
+    <button class="tab" role="tab" data-tab="kev"><svg class="i"><use href="#i-alert"/></svg>Exploited (KEV) <span class="n" id="nKev">0</span></button>
+    <button class="tab" role="tab" data-tab="watch"><svg class="i"><use href="#i-eye"/></svg>CVE Watch <span class="n" id="nWatch">0</span></button>
+    <button class="tab" role="tab" data-tab="ssvc"><svg class="i"><use href="#i-scale"/></svg>SSVC (demo) <span class="n" id="nSsvc">0</span></button>
+    <span class="nav-h">Intelligence</span>
+    <button class="tab" role="tab" data-tab="articles"><svg class="i"><use href="#i-news"/></svg>Articles <span class="n" id="nArt">0</span></button>
+    <button class="tab" role="tab" data-tab="note"><svg class="i"><use href="#i-note"/></svg>Ticket note</button>
+  </nav>
+  <div class="side-foot">
+    <div class="row"><span class="mode"><span class="dot" id="dot"></span><span id="mode">loading</span></span></div>
+    <div>Sources: CISA KEV, NVD, FIRST EPSS, CISA Vulnrichment, vendor advisories, security news.</div>
+  </div>
+</aside>
+<main class="main">
 <div class="wrap">
 <header>
-  <div class="brand"><span class="logo"><svg class="i"><use href="#i-shield"/></svg></span><div><h1>Threat Intel Watch</h1><div class="sub">CISA KEV · NVD · EPSS · advisories · news — filtered to the products we manage</div></div></div>
+  <div class="page"><h1 id="pageTitle">Overview</h1><div class="sub" id="pageSub">Exploited and high-severity vulnerabilities in the products we manage</div></div>
   <div class="hdr-actions">
-    <span class="mode"><span class="dot" id="dot"></span><span id="mode">loading</span></span>
     <button class="btn icon" id="theme" type="button" title="Toggle light / dark" aria-label="Toggle theme"><svg class="i"><use href="#i-sun"/></svg></button>
     <button class="btn" id="refresh" type="button"><svg class="i"><use href="#i-refresh"/></svg>Refresh</button>
   </div>
@@ -233,17 +314,8 @@ footer { color: var(--muted); font-size: 12px; margin-top: 24px; }
 
 <div class="notice" id="demoNotice" hidden>Showing <strong>sample data</strong>. Set <code>SUPABASE_URL</code> and <code>SUPABASE_ANON_KEY</code> at the top of the script to read live data.</div>
 
-<div class="pipe-head"><span class="label">Pipeline status · scheduled n8n workflows (hover for details)</span><span class="count" id="runsNote"></span></div>
+<div class="pipe-head"><span class="label">Automation · n8n workflows (hover a cell for details)</span><span class="count" id="runsNote"></span></div>
 <div class="pipe" id="pipe"></div>
-
-<div class="tabs" role="tablist">
-  <button class="tab" role="tab" data-tab="overview" aria-selected="true">Overview</button>
-  <button class="tab" role="tab" data-tab="kev">KEV <span class="n" id="nKev">0</span></button>
-  <button class="tab" role="tab" data-tab="watch">CVE Watch <span class="n" id="nWatch">0</span></button>
-  <button class="tab" role="tab" data-tab="articles">Articles <span class="n" id="nArt">0</span></button>
-  <button class="tab" role="tab" data-tab="ssvc">SSVC (demo) <span class="n" id="nSsvc">0</span></button>
-  <button class="tab" role="tab" data-tab="note">Ticket note</button>
-</div>
 
 <div class="filters">
   <div class="fbar">
@@ -261,16 +333,25 @@ footer { color: var(--muted); font-size: 12px; margin-top: 24px; }
 
 <section id="tab-overview">
   <div class="strip" id="strip"></div>
-  <div class="charts">
-    <div class="card"><h2>KEV additions in scope · per day</h2><div class="chartbox"><canvas id="cKev"></canvas></div></div>
-    <div class="card"><h2>Severity mix · KEV + CVE Watch</h2><div class="chartbox"><canvas id="cSev"></canvas></div></div>
-    <div class="card"><h2>Relevant articles · by source</h2><div class="chartbox"><canvas id="cSrc"></canvas></div></div>
-    <div class="card"><h2>Exposure by product · KEV + CVE Watch</h2><div class="chartbox"><canvas id="cProd"></canvas></div></div>
+  <div class="dash">
+    <div class="card s7"><div class="hd"><h2>Exposure summary</h2><span class="count" id="sumNote"></span></div>
+      <div class="sumgrid"><div class="donut"><canvas id="cSev"></canvas><div class="c"><div><b id="sumTotal">0</b><span>vulnerabilities</span></div></div></div><div id="sevTable"></div></div></div>
+    <div class="card s5"><div class="hd"><h2>Timeline, last 30 days</h2><span class="count">new per day, by severity</span></div><div class="chartbox"><canvas id="cKev"></canvas></div></div>
+    <div class="card s4"><div class="hd"><h2>Most likely to be exploited</h2><span class="count">EPSS, next 30 days</span></div><div class="vlist" id="hotList"></div></div>
+    <div class="card s4"><div class="hd"><h2>Most affected products</h2><span class="count">KEV + CVE Watch</span></div><div class="chartbox"><canvas id="cProd"></canvas></div></div>
+    <div class="card s4"><div class="hd"><h2>SSVC decisions (demo estate)</h2><span class="count" id="dispNote"></span></div><div class="disp" id="disp"></div><p class="muted" style="font-size:12px;margin:10px 0 0">Made-up clients. What SSVC would tell an engineer to do for each device and CVE pair.</p></div>
+    <div class="card s8"><div class="hd"><h2>Live attack map</h2><button class="link" type="button" id="openMap">Open full screen</button></div><div class="mapframe" style="height:330px" id="miniMap"></div><div class="mapnote" id="miniMapNote"></div></div>
+    <div class="card s4"><div class="hd"><h2>Relevant articles by source</h2></div><div class="chartbox" style="height:330px"><canvas id="cSrc"></canvas></div></div>
+    <div class="card s6"><div class="hd"><h2>Patch first</h2><span class="count">ranked by exploitation evidence, then EPSS</span></div><div class="prio" id="prio"></div></div>
+    <div class="card s6"><div class="hd"><h2>Top stories</h2><span class="count" id="storiesCount"></span></div><div class="stories" id="stories"></div></div>
   </div>
-  <div class="charts" style="grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));">
-    <div class="card"><h2>Patch-first list · ranked by exploitation evidence then EPSS</h2><div class="prio" id="prio"></div></div>
-    <div class="card"><div class="sect-head"><h2>Top stories · highest-scoring articles</h2><span class="count" id="storiesCount"></span></div><div class="stories" id="stories"></div></div>
-  </div>
+</section>
+
+<section id="tab-map" hidden>
+  <div class="sect-head"><div><h2>Live attack map</h2><span class="count">Global attacks seen by the vendor's own sensors, shown live. Not our clients' data.</span></div>
+    <div class="r"><span class="seg" id="mapSeg" role="group" aria-label="Map provider"><button type="button" data-p="checkpoint" aria-pressed="true">Check Point</button><button type="button" data-p="kaspersky">Kaspersky</button></span></div></div>
+  <div class="mapframe" style="height:calc(100vh - 230px);min-height:420px" id="bigMap"></div>
+  <p class="mapnote" id="bigMapNote"></p>
 </section>
 
 <section id="tab-kev" hidden>
@@ -316,7 +397,9 @@ footer { color: var(--muted); font-size: 12px; margin-top: 24px; }
   <pre class="note" id="noteBody"></pre>
 </section>
 
-<footer>Summaries by Claude (Haiku). Sources: CISA KEV · NVD · FIRST EPSS · CISA advisories · ASD ACSC · MSRC · Fortinet PSIRT · BleepingComputer · The Hacker News · AskWoody. Pipeline: n8n → Supabase → email / ticket note.</footer>
+<footer>Summaries by Claude (Haiku). Sources: CISA KEV, NVD, FIRST EPSS, CISA Vulnrichment, CISA advisories, ASD ACSC, MSRC, Fortinet PSIRT, BleepingComputer, The Hacker News, AskWoody. Attack maps: Check Point ThreatCloud and Kaspersky Cybermap (embedded, their data).</footer>
+</div>
+</main>
 </div>
 
 <script>
@@ -572,7 +655,7 @@ function buildFilters() {
 function syncCounts() {
   $$("details.dd").forEach(d => { const n = state.chips[d.dataset.group].size; d.querySelector(".cnt").textContent = n ? n : ""; });
   const ar = $("#activeRow"); ar.innerHTML = "";
-  const tabFlags = { ssvc: [], overview: ["new", "ransomware"], kev: ["new", "ransomware"], watch: ["new", "notkev", "expand"], articles: ["new", "relevant"], note: [] }[state.tab] || [];
+  const tabFlags = { ssvc: [], map: [], overview: ["new", "ransomware"], kev: ["new", "ransomware"], watch: ["new", "notkev", "expand"], articles: ["new", "relevant"], note: [] }[state.tab] || [];
   for (const [group, set] of Object.entries(state.chips)) for (const key of set) {
     if (group === "flags" && !tabFlags.includes(key)) continue;
     if (group === "source" && state.tab !== "articles") continue;
@@ -611,13 +694,16 @@ function render() {
   $("#nSsvc").textContent = data.ssvc.length;
   $("#nArt").textContent = data.articles.filter(a => artKept(a) && inWindow(tsOf(a, "published_at"))).length;
   $$("section[id^=tab-]").forEach(s => s.hidden = s.id !== `tab-${state.tab}`);
-  $(".filters").hidden = state.tab === "note";
+  $(".filters").hidden = state.tab === "note" || state.tab === "map";
+  const PAGE = { overview: ["Overview", "Exploited and high-severity vulnerabilities in the products we manage"], map: ["Live attack map", "What attackers are doing worldwide right now"], kev: ["Exploited vulnerabilities", "CISA Known Exploited Vulnerabilities that match our products"], watch: ["CVE Watch", "New CVSS 7+ vulnerabilities in our stack, before they are exploited"], ssvc: ["SSVC decisions (demo)", "What to do, per device, next to the CVSS score"], articles: ["Articles", "News and advisories, scored and summarised"], note: ["Ticket note", "Plain-text daily summary for the ticket"] }[state.tab] || ["", ""];
+  $("#pageTitle").textContent = PAGE[0]; $("#pageSub").textContent = PAGE[1];
   if (state.tab === "overview") renderOverview(kev, watch, arts);
   if (state.tab === "kev") renderKev(kev);
   if (state.tab === "watch") renderWatch(watch);
   if (state.tab === "articles") renderArts(arts);
   if (state.tab === "ssvc") renderSsvc();
   if (state.tab === "note") renderNote();
+  if (state.tab === "map") renderMap();
 }
 
 function renderNote() {
@@ -635,38 +721,83 @@ function renderOverview(kev, watch, arts) {
   const due7 = kev.filter(k => k.due_date && (new Date(k.due_date) - now()) < 7 * DAY && (new Date(k.due_date) - now()) > -DAY).length;
   const newKev = data.kev.filter(k => isNew(k.date_added)).length;
   const newWatch = collapseBatches(data.watch.filter(w => isNew(w.published_at))).length;
-  const crit = [...kev, ...watch].filter(r => sevOf(r) === "CRITICAL").length;
-  const relevant = data.articles.filter(a => artKept(a) && inWindow(tsOf(a, "published_at"))).length;
-  const total = data.articles.filter(a => inWindow(tsOf(a, "published_at"))).length;
-  const wl = state.from != null || state.to != null ? "custom range" : state.days ? `last ${state.days} d` : "all time";
+  const watchOnly = watch.filter(w => !w.in_kev);
+  const pool = [...kev, ...watchOnly];
+  const crit = pool.filter(r => sevOf(r) === "CRITICAL").length;
+  const ss = data.ssvc || [], act = ss.filter(r => r.ssvc_action === "immediate" || r.ssvc_action === "out-of-cycle").length;
+  const wl = state.from != null || state.to != null ? "custom range" : state.days ? `last ${state.days} days` : "all time";
   $("#strip").innerHTML = [
-    tile(kev.length, "KEV in scope", wl, newKev ? "info" : ""), tile(rw, "ransomware known", "patch first", rw ? "crit" : ""),
-    tile(due7, "federal due ≤ 7 d", "CISA BOD 22-01", due7 ? "high" : ""), tile(newWatch, "new high-sev CVEs (24 h)", "not yet exploited", newWatch ? "high" : ""),
-    tile(crit, "critical (CVSS ≥ 9)", "KEV + watch", crit ? "crit" : ""), tile(relevant, "relevant articles", `of ${total} collected`, "info"),
-    tile(total ? Math.round(100 - relevant / total * 100) : 0, "% noise removed", "keyword + AI screening", ""),
+    tile(kev.length, "Exploited in our stack", `CISA KEV, ${wl}`, newKev ? "info" : ""),
+    tile(rw, "Used by ransomware", "patch these first", rw ? "crit" : ""),
+    tile(due7, "Federal deadline within 7 days", "CISA BOD 22-01 due date", due7 ? "high" : ""),
+    tile(newWatch, "New high-severity CVEs", "last 24 hours, not yet exploited", newWatch ? "high" : ""),
+    tile(crit, "Critical (CVSS 9+)", "KEV and CVE Watch", crit ? "crit" : ""),
+    tile(ss.length ? act : "–", "Act before next patch window", ss.length ? `SSVC, of ${ss.length} demo pairs` : "SSVC demo not loaded", act ? "violet" : ""),
   ].join("");
+  // severity donut + table
+  const sevs = ["CRITICAL", "HIGH", "MEDIUM", "LOW", "NA"], sevName = { CRITICAL: "Critical", HIGH: "High", MEDIUM: "Medium", LOW: "Low", NA: "No score" };
+  const sevVar = { CRITICAL: "--crit", HIGH: "--high", MEDIUM: "--med", LOW: "--low", NA: "--muted" };
+  const cnt = (rows, s) => rows.filter(r => (sevOf(r) || "NA") === s).length;
+  $("#sumTotal").textContent = pool.length;
+  $("#sumNote").textContent = wl;
+  chart("cSev", "doughnut", { labels: sevs.map(s => sevName[s]), datasets: [{ data: sevs.map(s => cnt(pool, s)), backgroundColor: sevs.map(s => cssVar(sevVar[s])), borderColor: cssVar("--panel"), borderWidth: 3 }] },
+    { cutout: "72%", plugins: { legend: { display: false } } });
+  const row = (label, sw, cells, cls = "") => `<tr class="${cls}"><td style="--sw:${sw}">${label}</td>${cells.map(c => `<td>${c}</td>`).join("")}</tr>`;
+  const line = (s) => { const k = cnt(kev, s), w = cnt(watchOnly, s), r = kev.filter(x => (sevOf(x) || "NA") === s && x.ransomware === "Known").length, e = pool.filter(x => (sevOf(x) || "NA") === s && (x.epss_score || 0) >= 0.1).length; return [k, w, r, e, k + w]; };
+  $("#sevTable").innerHTML = `<table class="sevt"><thead><tr><th>Severity</th><th>KEV</th><th>CVE Watch</th><th>Ransomware</th><th>EPSS ≥ 10%</th><th>Total</th></tr></thead><tbody>
+    ${sevs.map(s => row(sevName[s], `var(${sevVar[s]})`, line(s))).join("")}
+    ${row("Total", "transparent", [kev.length, watchOnly.length, rw, pool.filter(x => (x.epss_score || 0) >= 0.1).length, pool.length], "tot")}</tbody></table>`;
+  // timeline by severity
   const days = [...Array(30)].map((_, i) => new Date(now() - (29 - i) * DAY).toISOString().slice(0, 10));
-  const cnt = Object.fromEntries(days.map(d => [d, 0])); for (const k of data.kev) if (k.date_added in cnt) cnt[k.date_added]++;
-  chart("cKev", "bar", { labels: days.map(d => d.slice(5)), datasets: [{ data: days.map(d => cnt[d]), backgroundColor: cssVar("--accent"), borderRadius: 3 }] },
-    { scales: { x: { ticks: { maxTicksLimit: 8 } }, y: { beginAtZero: true, ticks: { precision: 0 } } } });
-  const sevs = ["CRITICAL", "HIGH", "MEDIUM", "LOW"]; const pool = [...kev, ...watch];
-  chart("cSev", "doughnut", { labels: sevs.map(s => s.charAt(0) + s.slice(1).toLowerCase()), datasets: [{ data: sevs.map(s => pool.filter(r => sevOf(r) === s).length), backgroundColor: [cssVar("--crit"), cssVar("--high"), cssVar("--med"), cssVar("--low")], borderWidth: 0 }] },
-    { cutout: "62%", plugins: { legend: { position: "right" } } });
+  const dayOf = (r) => String(r.date_added || r.published_at || "").slice(0, 10);
+  const kevIds = new Set(data.kev.map(k => k.cve_id)), tl = [...data.kev, ...collapseBatches(data.watch.filter(w => !kevIds.has(w.cve_id)))];
+  const series = ["CRITICAL", "HIGH", "MEDIUM"].map(s => ({ label: sevName[s], borderColor: cssVar(sevVar[s]), backgroundColor: cssVar(sevVar[s]), tension: .35, pointRadius: 0, borderWidth: 2,
+    data: days.map(d => tl.filter(r => dayOf(r) === d && sevOf(r) === s).length) }));
+  chart("cKev", "line", { labels: days.map(d => d.slice(5)), datasets: series },
+    { plugins: { legend: { display: true, position: "top", align: "end", labels: { boxWidth: 10, boxHeight: 2 } } }, scales: { x: { grid: { display: false }, ticks: { maxTicksLimit: 8 } }, y: { beginAtZero: true, ticks: { precision: 0 } } } });
+  // most likely to be exploited
+  const hot = pool.filter(r => r.epss_score != null && !r._batch).sort((a, b) => b.epss_score - a.epss_score).slice(0, 8);
+  $("#hotList").innerHTML = hot.length ? hot.map((r, i) => `<div class="vrow"><span class="rk">${i + 1}</span><div style="min-width:0"><a href="${cveUrl(r.cve_id)}" target="_blank" rel="noopener">${esc(r.cve_id)}</a> ${sevHtml(r)}<div class="pd">${esc(swOf(r))}${kev.includes(r) ? " · in KEV" : ""}</div></div><span class="ev">${(r.epss_score * 100).toFixed(0)}%<small>EPSS</small></span></div>`).join("") : `<div class="empty">No EPSS scores in this window yet.</div>`;
+  // products
+  const pc = {}; for (const r of pool) { const g = r.product_group || "Other"; pc[g] = (pc[g] || 0) + (r._n || 1); }
+  const pe = Object.entries(pc).sort((a, b) => b[1] - a[1]).slice(0, 8);
+  chart("cProd", "bar", { labels: pe.map(e => e[0]), datasets: [{ data: pe.map(e => e[1]), backgroundColor: cssVar("--high"), borderRadius: 4, barThickness: 14 }] },
+    { indexAxis: "y", scales: { x: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: cssVar("--line") } }, y: { grid: { display: false } } } });
+  // SSVC disposition
+  const acts = [["immediate", "--crit", "Immediate"], ["out-of-cycle", "--high", "Out-of-cycle"], ["scheduled", "--med", "Scheduled"], ["defer", "--muted", "Defer"]];
+  $("#dispNote").textContent = ss.length ? `${ss.length} pairs` : "";
+  $("#disp").innerHTML = acts.map(([k, v, l]) => { const n = ss.filter(r => r.ssvc_action === k).length; return `<div style="--dc:var(${v})"><b>${n}</b><span class="pc">${ss.length ? (100 * n / ss.length).toFixed(1) : "0.0"}%</span><span class="lb">${l}</span></div>`; }).join("");
+  // sources
   const sc = {}; for (const a of data.articles) if (artKept(a) && inWindow(tsOf(a, "published_at"))) sc[a.source] = (sc[a.source] || 0) + 1;
   const se = Object.entries(sc).sort((a, b) => b[1] - a[1]);
-  chart("cSrc", "bar", { labels: se.map(e => e[0]), datasets: [{ data: se.map(e => e[1]), backgroundColor: cssVar("--info"), borderRadius: 3 }] },
-    { indexAxis: "y", scales: { x: { beginAtZero: true, ticks: { precision: 0 } } } });
-  const pc = {}; for (const r of [...kev, ...watch]) { const g = r.product_group || "Other"; pc[g] = (pc[g] || 0) + (r._n || 1); }
-  const pe = Object.entries(pc).sort((a, b) => b[1] - a[1]).slice(0, 10);
-  chart("cProd", "bar", { labels: pe.map(e => e[0]), datasets: [{ data: pe.map(e => e[1]), backgroundColor: cssVar("--high"), borderRadius: 3 }] },
-    { indexAxis: "y", scales: { x: { beginAtZero: true, ticks: { precision: 0 } } } });
+  chart("cSrc", "bar", { labels: se.map(e => e[0]), datasets: [{ data: se.map(e => e[1]), backgroundColor: cssVar("--info"), borderRadius: 4, barThickness: 14 }] },
+    { indexAxis: "y", scales: { x: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: cssVar("--line") } }, y: { grid: { display: false } } } });
+  loadMap("miniMap", "checkpoint");
+  // patch first
   const rank = (r, src) => (src === "kev" ? 1000 : 0) + (r.ransomware === "Known" ? 500 : 0) + (r.epss_score || 0) * 100 + (r.cvss_score || 0);
-  const items = [...kev.map(k => ({ ...k, _src: "kev", _why: `${k.ransomware === "Known" ? "ransomware use known · " : ""}exploited (KEV) · due ${fmtD(k.due_date)}` })),
-                 ...watch.filter(w => !w.in_kev).map(w => ({ ...w, _src: "watch", _why: `CVSS ${w.cvss_score} · EPSS ${w.epss_score == null ? "–" : (w.epss_score*100).toFixed(1) + "%"} · not in KEV` }))]
+  const items = [...kev.map(k => ({ ...k, _src: "kev", _why: `${k.ransomware === "Known" ? "ransomware use known, " : ""}exploited (KEV), due ${fmtD(k.due_date)}` })),
+                 ...watchOnly.map(w => ({ ...w, _src: "watch", _why: `CVSS ${w.cvss_score}, EPSS ${w.epss_score == null ? "–" : (w.epss_score*100).toFixed(1) + "%"}, not in KEV` }))]
     .sort((a, b) => rank(b, b._src) - rank(a, a._src)).slice(0, 6);
   renderStories(data.articles.filter(a => inWindow(tsOf(a, "published_at")) && hit(`${a.title} ${a.summary}`)));
-  $("#prio").innerHTML = items.length ? items.map(r => `<div class="prio-row">${sevHtml(r)}<div>${r._batch ? `<span class="t">${esc(r._label)} <span class="pill muted">×${r._n}</span></span>` : `<a class="t" href="${cveUrl(r.cve_id)}" target="_blank" rel="noopener">${esc(r.cve_id)}</a>`} · ${esc(r.vendor || r.matched_vendor)}${r.product ? " " + esc(r.product) : ""}<div class="why">${esc(r.vuln_name || (r.description || "").slice(0, 120))} · ${esc(r._why)}</div></div><span class="pill ${r._src === "kev" ? "kev" : "muted"}">${r._src === "kev" ? "KEV" : "watch"}</span></div>`).join("") : `<div class="empty">Nothing in the current window.</div>`;
+  $("#prio").innerHTML = items.length ? items.map(r => `<div class="prio-row">${sevHtml(r)}<div>${r._batch ? `<span class="t">${esc(r._label)} <span class="pill muted">×${r._n}</span></span>` : `<a class="t" href="${cveUrl(r.cve_id)}" target="_blank" rel="noopener">${esc(r.cve_id)}</a>`} · ${esc(r.vendor || r.matched_vendor)}${r.product ? " " + esc(r.product) : ""}<div class="why">${esc(r.vuln_name || (r.description || "").slice(0, 120))}. ${esc(r._why)}</div></div><span class="pill ${r._src === "kev" ? "kev" : "muted"}">${r._src === "kev" ? "KEV" : "watch"}</span></div>`).join("") : `<div class="empty">Nothing in the current window.</div>`;
 }
+
+// ----- live attack maps (embedded vendor widgets; their data, not ours)
+const MAPS = {
+  checkpoint: { url: "https://threatmap.checkpoint.com/", note: "Check Point ThreatCloud: attacks blocked by Check Point sensors worldwide, replayed live." },
+  kaspersky: { url: "https://cybermap.kaspersky.com/en/widget/dynamic/dark", note: "Kaspersky Cybermap widget: detections reported by Kaspersky products. Kaspersky software is restricted for Australian government use; shown here only as a public visualisation." },
+};
+state.map = "checkpoint";
+function loadMap(boxId, provider) {
+  const box = $("#" + boxId); if (!box) return;
+  const m = MAPS[provider]; if (box.dataset.p === provider) return;
+  box.dataset.p = provider;
+  box.innerHTML = `<iframe src="${m.url}" title="Live attack map (${esc(provider)})" loading="lazy" referrerpolicy="no-referrer" sandbox="allow-scripts allow-same-origin"></iframe>`;
+  const note = $("#" + boxId.replace("Map", "MapNote")); if (note) note.textContent = m.note;
+}
+function renderMap() { loadMap("bigMap", state.map); $$("#mapSeg button").forEach(b => b.setAttribute("aria-pressed", b.dataset.p === state.map)); }
+$$("#mapSeg button").forEach(b => b.addEventListener("click", () => { state.map = b.dataset.p; renderMap(); }));
+$("#openMap").addEventListener("click", () => $('.tab[data-tab="map"]').click());
 
 function renderStories(arts) {
   const top = [...arts].filter(artKept).sort((a, b) => b.score - a.score || tsOf(b, "published_at") - tsOf(a, "published_at")).slice(0, 6);

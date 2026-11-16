@@ -306,7 +306,13 @@ KEV and CVE Watch cards also show the CISA answers as a small chip ("SSVC · Exp
 
 The latest TI 07 note with a one-click copy. It is plain text — it pastes cleanly into a ConnectWise ticket note.
 
-## 5.5 Mobile
+## 5.5 Layout and the live attack map
+
+Since v1.3 the dashboard is laid out like a SOC (Security Operations Centre) console: a left menu (Overview, Live attack map, Exploited (KEV), CVE Watch, SSVC (demo), Articles, Ticket note), one automation strip with a cell per n8n workflow, and an Overview made of panels: headline tiles, an exposure summary (severity donut plus a KEV / CVE Watch / ransomware / EPSS table), a 30-day timeline by severity, the CVEs most likely to be exploited (EPSS), the most affected products, the SSVC decision split for the demo estate, the live attack map, articles by source, the patch-first list and top stories.
+
+The **live attack map** embeds a public vendor map: Check Point ThreatCloud by default, with Kaspersky Cybermap as an alternative. It shows attacks seen by that vendor's own sensors worldwide. It is **not** our clients' data, and nothing from the dashboard is sent to the vendor (the frame is sandboxed and sends no referrer). Kaspersky software is restricted for Australian government use, so Check Point is the default.
+
+## 5.6 Mobile
 
 ![Mobile](screenshots/dashboard-mobile.png)
 
