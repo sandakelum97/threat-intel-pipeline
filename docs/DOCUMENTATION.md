@@ -20,7 +20,7 @@ This project replaces that routine with a small, automated pipeline:
 4. **Deliver** — the results go out as emails, a web dashboard, and a daily plain-text **ticket note** ready to paste into the ticketing system.
 5. **Verify** — a separate workflow re-checks the stored data against the live sources so we know the numbers are right.
 
-Everything runs on free or already-paid-for services: **n8n** (the workflow engine, running on a laptop), **Supabase** (a hosted PostgreSQL database), **Claude** (AI summaries, paid from the Claude Max plan's API credit), **Gmail SMTP** (email), and **Vercel** (dashboard hosting).
+Everything runs on free or low-cost services: **n8n** (the workflow engine, running on a laptop), **Supabase** (a hosted PostgreSQL database), **Claude** (AI summaries, paid from the Claude Console API credit, which is separate from a Claude Max subscription), **Gmail SMTP** (email), and **Vercel** (dashboard hosting).
 
 ## 1.1 Abbreviations used in this document
 
@@ -59,7 +59,7 @@ Everything runs on free or already-paid-for services: **n8n** (the workflow engi
 |---|---|---|---|
 | Workflow engine | n8n 2.x (Node 22) | Laptop, `localhost:5678` | Visual, easy to demo and hand over; every step is a visible node. |
 | Database | Supabase (PostgreSQL + REST API) | Supabase cloud, free tier | Zero-ops, has a REST API (PostgREST) so n8n needs no DB driver; RLS makes the dashboard read-only. |
-| AI | Claude Haiku 5.5 via the Anthropic API | Anthropic cloud | Fast and cheap for 2-sentence summaries; cost covered by the Max plan credit. |
+| AI | Claude Haiku 5.5 via the Anthropic API | Anthropic cloud | Fast and cheap for 2-sentence summaries (about US$0.001 each), billed to the Console API credit. |
 | Email | Gmail SMTP (app password) | Google | Available now; Teams webhook is one node swap away. |
 | Dashboard | Single static HTML file (Chart.js) | Vercel | No server, no build step, loads straight from Supabase with the public (anon) key. |
 | Source control | Git, private GitHub repo | GitHub | Config placeholders only; keys never leave the laptop. |

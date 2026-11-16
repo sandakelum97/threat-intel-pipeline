@@ -33,7 +33,7 @@ kept/dropped articles and *why* each was kept.
 Also run `supabase/migration-002-cvss-epss.sql` (CVSS/EPSS columns, `cve_watch` table), `supabase/migration-003-batch-key.sql` (browser release batching), `supabase/migration-004-groups-ai.sql` (product groups + AI summary columns) `supabase/migration-005-ticket-notes.sql` (`ticket_notes` table for TI 07) `supabase/migration-006-remediation.sql` (fix versions, advisory link, software name), and for the SSVC layer `migration-007-ssvc-decision.sql`, `migration-008-vulnrichment.sql` and `migration-009-demo-estate.sql` (made-up demo estate; see docs section 12).
 
 ### 1c. Claude API key (summaries)
-In n8n: **Credentials → Create → Anthropic** → paste your API key, name it **`Anthropic account`**. The Claude nodes in TI 01/04/05/06 reference it by that name. Cost: Haiku, roughly US$0.001 per item; the Max plan's monthly API credit covers it. Set `AI_ENABLED: false` in Config to switch summaries off (emails still send).
+In n8n: **Credentials → Create → Anthropic** → paste your API key, name it **`Anthropic account`**. The Claude nodes in TI 01/04/05/06 reference it by that name. Cost: Haiku, roughly US$0.001 per item, billed to the Claude Console account's API credit (separate from a Claude Pro/Max subscription). When the key changes, edit the existing **Anthropic account** credential in n8n; every workflow picks it up. Set `AI_ENABLED: false` in Config to switch summaries off (emails still send).
 
 ### 1b. NVD API key (TI 04 / TI 05)
 Request a free key at https://nvd.nist.gov/developers/request-an-api-key and put it in `NVD_API_KEY` in the Config node of TI 04 and TI 05.
