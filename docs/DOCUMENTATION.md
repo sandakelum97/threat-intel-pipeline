@@ -6,7 +6,7 @@ date: "November 2026"
 ---
 
 **Author:** Tharaka D. — Security Engineer (L2/L3), Subnet, via TGT Global · GitHub `sandakelum97`
-**Version:** 1.2 · November 2026 · Repository: `threat-intel-pipeline` (private)
+**Version:** 1.3 · November 2026 · Repository: `threat-intel-pipeline` (private)
 
 # 1. What this project is, in plain words
 
@@ -228,7 +228,9 @@ How it runs: it takes up to 150 CVEs from `kev_entries` and `cve_watch` that wer
 - **Not every CVE has been assessed.** If CISA has no file yet (HTTP 404), the row is marked `not_assessed` and the dashboard says "SSVC: not assessed by CISA". Any other error (rate limit, network) is skipped and retried next run, so a temporary fault never marks a CVE wrongly.
 - **Caution for research use:** CISA updates Exploitation when a CVE enters KEV. The stored value is "as of the last check", fine for today's triage but not for back-testing past decisions.
 
-Tested on real CISA files before deployment (an assessed KEV CVE, an assessed non-KEV CVE, a 404, and a server error): all four handled correctly.
+Tested on real CISA files before deployment (an assessed KEV CVE, an assessed non-KEV CVE, a 404, and a server error): all four handled correctly. On the first live run all 1,200 tracked CVEs (1,122 KEV, 78 CVE Watch) were checked; every one had a CISA assessment.
+
+![TI 08](screenshots/wf-08-vulnrichment.jpg)
 
 ## 3.10 Execution history
 
@@ -254,69 +256,73 @@ All tables have Row Level Security enabled with a read-only policy for the publi
 
 # 5. The dashboard
 
-A single HTML file (`dashboard/index.html`), hosted on Vercel, reading Supabase directly. No login; anyone with the link can view. Light and dark themes follow the system setting (toggle in the header).
+A single HTML file (`dashboard/index.html`), hosted on Vercel, reading Supabase directly with the read-only public key. No login: anyone with the link can view it. Dark and light themes follow the system setting (sun button at the top right). Since v1.3 it is laid out like a SOC (Security Operations Centre) console.
 
-## 5.1 Overview
+## 5.1 Layout
 
-![Overview (live data, dark theme)](screenshots/dashboard-overview-live.jpg)
+- **Left menu**, in three groups: *Monitor* (Overview, Live attack map), *Vulnerabilities* (Exploited (KEV), CVE Watch, SSVC (demo)) and *Intelligence* (Articles, Ticket note). Numbers next to the items are row counts. At the bottom: the data mode (live or sample) and the sources.
+- **Automation strip** (top of every page): one cell per n8n workflow, with when it last ran, its schedule and a *Run now* button. A green dot means "on schedule", amber means "later than expected". Hover or keyboard-focus a cell for the schedule, last run, last result and recent history.
+- **Filter bar:** search; time window (24 h / 7 d / 30 d / 90 d / All) or an exact from → to date range; dropdowns for Severity, Product group, Software, Source and Flags, with counts; active filters show as removable chips; *Clear filters* resets everything.
 
-![Overview (sample data, light theme)](screenshots/dashboard-overview-light.png)
+**Run now** calls the workflow's n8n webhook (`POST /webhook/ti-run/<kind>`) with the `x-run-token` header, which n8n checks. The token is never stored in the code or on Vercel: the first time you press *Run now*, the page asks for it once and keeps it only in that browser. A wrong token is forgotten and asked for again. Each workflow has a 10-minute cooldown (the button shows "queued"). The buttons work only on the laptop that runs n8n (`http://localhost:5678`); on other computers they show "n8n not reachable".
 
-- **Pipeline status** tiles (top): one per scheduled workflow, showing when it last ran and whether that is on schedule (green) or later than expected (amber). These are *indicators, not buttons* — the workflows run themselves in n8n. Hover (or focus with the keyboard) for the schedule, last run time, last result and recent history.
+![Automation strip with a cell's details on hover](screenshots/dashboard-attack-map.jpg)
 
-![Pipeline hover](screenshots/dashboard-pipeline-hover.png)
+## 5.2 Overview
 
-- **Run now** on each tile: fires the workflow's n8n Webhook trigger (`POST /webhook/ti-run/<kind>` with the `x-run-token` header checked by n8n's Header Auth credential). Buttons only appear when `N8N_RUN_BASE` and `RUN_TOKEN` are set in the page config, and each workflow has a 10-minute cooldown. Today this works from the laptop that runs n8n (`http://localhost:5678`); for the whole team, n8n goes behind a Cloudflare Tunnel + Cloudflare Access login and the base URL changes to the tunnel address — that is also where "admin only" access is enforced.
-- **Filter bar:** search; time window as a segmented control (24 h / 7 d / 30 d / 90 d / All) or an explicit **from → to date range**; category dropdowns (Severity, Product, Source, Flags) that show counts and keep the bar compact; active filters appear as removable chips; *Clear filters* resets everything.
-- **KPI tiles:** KEV in scope, ransomware-known, federal due within 7 days, new high-severity CVEs in 24 h, criticals, relevant articles, % noise removed.
-- **Charts:** KEV additions per day, severity mix, articles by source, exposure by product.
-- **Patch-first list:** ranked by exploitation evidence (KEV, ransomware) then EPSS.
-- **Top stories:** highest-scoring articles with their AI summary.
+![Overview, live data, dark theme](screenshots/dashboard-overview-live.jpg)
 
-## 5.2 KEV, CVE Watch, Articles
+| Panel | What it shows |
+|---|---|
+| Headline tiles | Exploited in our stack (KEV), used by ransomware, federal deadline within 7 days, new high-severity CVEs (24 h), critical (CVSS 9+), and SSVC "act before next patch window" for the demo estate |
+| Exposure summary | Severity donut plus a table: severity × KEV, CVE Watch, ransomware, EPSS ≥ 10 %, total |
+| Timeline, last 30 days | New KEV and CVE Watch entries per day, one line per severity |
+| Most likely to be exploited | Top 8 CVEs by EPSS (probability of exploitation in the next 30 days) |
+| Most affected products | Product groups with the most entries |
+| SSVC decisions (demo estate) | How many device × CVE pairs fall into immediate, out-of-cycle, scheduled and defer |
+| Live attack map | Embedded vendor map (section 5.5) |
+| Relevant articles by source, Patch first, Top stories | Where the kept news comes from; KEV and CVE Watch ranked by exploitation evidence then EPSS; best-scoring articles with their Claude summary |
 
-Each tab has a **tile view** (cards: id, severity, product group, summary, action, EPSS bar, dates) and a **table view** (sortable columns) — toggle at the top right; the choice is remembered.
+![Overview panels: EPSS top list, products, SSVC split](screenshots/dashboard-overview-panels.jpg)
 
-![KEV table view (live)](screenshots/dashboard-kev-table-live.jpg)
+![Overview, lower part: live attack map and articles by source](screenshots/dashboard-overview-map.jpg)
 
-![KEV tiles with severity + date-range filters and the Fix line](screenshots/dashboard-kev-filters.png)
+![Overview, sample data, light theme](screenshots/dashboard-overview-light.png)
 
-![CVE Watch tiles (live)](screenshots/dashboard-cvewatch-live.jpg)
+## 5.3 Exploited (KEV), CVE Watch, Articles
 
-![Articles (live)](screenshots/dashboard-articles-live.jpg)
+Each page has a **tile view** (cards with id, severity, product group, Claude summary and action, Fix line, EPSS bar, dates) and a **table view** (sortable columns); the toggle is at the top right and the choice is remembered. KEV and CVE Watch rows also carry the CISA SSVC answers as a small label ("SSVC · Exploitation active · Automatable no", or "SSVC: not assessed by CISA").
 
-![CVE Watch table, dark theme](screenshots/dashboard-cvewatch-table-dark.png)
+![Exploited (KEV), table view, live](screenshots/dashboard-kev-table-live.jpg)
 
 Article badges: **kept** (keyword score and Claude both say relevant), **AI: skip** (keyword score kept it, Claude judged it not relevant), **dropped** (below the keyword threshold).
 
-## 5.3 SSVC (demo) tab
+## 5.4 SSVC (demo)
 
-Shows, for a **made-up** estate of three clients, what SSVC would tell an engineer to do for each device × CVE pair, side by side with CVSS:
+For a **made-up** estate of three clients, the page shows what SSVC would tell an engineer to do for each device × CVE pair, next to CVSS:
 
-- **Tiles:** how many pairs land in each SSVC action (immediate, out-of-cycle, scheduled, defer), how many have CVSS ≥ 7, how many used a CERT/CC default because CISA had no assessment, and how many sit on software past end of support.
-- **SSVC vs CVSS table:** highlighted cells are the interesting disagreements — CVSS high but SSVC says defer (time saved), or CVSS medium but SSVC says act now (risk caught).
+- **Tiles:** pairs per SSVC action, how many have CVSS ≥ 7, how many used a CERT/CC default because CISA had no assessment, and how many sit on software past end of support.
+- **SSVC vs CVSS table:** highlighted cells are the disagreements worth discussing: CVSS high but SSVC says defer (effort saved), or CVSS medium but SSVC says act now (risk caught).
 - **Why:** which rules fired (R1–R9, M1–M5, S1–S4), so every action can be traced.
-- **List:** each pair with its inputs and rule IDs. Pick a tenant or search to narrow.
+- **List:** each pair with its inputs and rule IDs; pick a tenant or search to narrow.
 
-KEV and CVE Watch cards also show the CISA answers as a small chip ("SSVC · Exploitation active · Automatable no", or "SSVC: not assessed by CISA"). The pipeline strip has a ninth tile for TI 08.
+![SSVC (demo): tiles, SSVC vs CVSS, rules that fired](screenshots/dashboard-ssvc-demo.jpg)
 
-## 5.4 Ticket note
+![SSVC (demo): one row per device and CVE, with inputs and rule IDs](screenshots/dashboard-ssvc-rows.jpg)
 
-![Ticket note (live)](screenshots/dashboard-ticket-note-live.jpg)
+## 5.5 Live attack map
 
-The latest TI 07 note with a one-click copy. It is plain text — it pastes cleanly into a ConnectWise ticket note.
+The map page embeds a public vendor map: **Check Point ThreatCloud** by default, with **Kaspersky Cybermap** as an alternative (switch at the top right). It shows attacks seen by that vendor's own sensors worldwide. It is **not** our clients' data, and nothing from the dashboard is sent to the vendor: the frame is sandboxed and sends no referrer. Kaspersky software is restricted for Australian government use, so Check Point is the default.
 
-## 5.5 Layout and the live attack map
+## 5.6 Ticket note
 
-Since v1.3 the dashboard is laid out like a SOC (Security Operations Centre) console: a left menu (Overview, Live attack map, Exploited (KEV), CVE Watch, SSVC (demo), Articles, Ticket note), one automation strip with a cell per n8n workflow, and an Overview made of panels: headline tiles, an exposure summary (severity donut plus a KEV / CVE Watch / ransomware / EPSS table), a 30-day timeline by severity, the CVEs most likely to be exploited (EPSS), the most affected products, the SSVC decision split for the demo estate, the live attack map, articles by source, the patch-first list and top stories.
+The latest TI 07 note with a one-click copy. It is plain text, so it pastes cleanly into a ConnectWise ticket note.
 
-The **live attack map** embeds a public vendor map: Check Point ThreatCloud by default, with Kaspersky Cybermap as an alternative. It shows attacks seen by that vendor's own sensors worldwide. It is **not** our clients' data, and nothing from the dashboard is sent to the vendor (the frame is sandboxed and sends no referrer). Kaspersky software is restricted for Australian government use, so Check Point is the default.
+## 5.7 Mobile
 
-## 5.6 Mobile
+On a phone the left menu becomes a bar along the top and every panel stacks into one column.
 
-![Mobile](screenshots/dashboard-mobile.png)
-
-Everything reflows to a single column at phone width.
+![Mobile, sample data](screenshots/dashboard-mobile.png)
 
 # 6. Emails
 
