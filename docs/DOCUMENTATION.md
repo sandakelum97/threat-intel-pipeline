@@ -1,11 +1,11 @@
 ---
 title: "Threat Intel Pipeline — Project Documentation"
 subtitle: "Automated vulnerability and threat-intelligence collection for an MSSP"
-author: "Tharaka D. — Security Engineer, Subnet (TGT Global)"
+author: "Tharaka D."
 date: "November 2026"
 ---
 
-**Author:** Tharaka D. — Security Engineer (L2/L3), Subnet, via TGT Global · GitHub `sandakelum97`
+**Author:** Tharaka D. · GitHub `sandakelum97`
 **Version:** 1.3 · November 2026 · Repository: `threat-intel-pipeline` (public)
 
 # 1. What this project is, in plain words
@@ -396,7 +396,7 @@ Safeguards:
 | "Where do we have this?" — per-client exposure | TI 09 – NinjaOne inventory (replaces the demo estate in section 12): pull device and software inventory per organisation, match against KEV / CVE Watch → "CVE-x affects 14 devices across 3 clients" → patch plan priority. Needs a NinjaOne API app and approval. |
 | Microsoft Teams delivery | Swap the email node for the Teams webhook once a channel is available. |
 | Dashboard login | Supabase Auth + RLS by user, if the link must be restricted. |
-| Decision logic on real clients | Built and demonstrated on a made-up estate (section 12). Running it on real client data needs Matt's written approval, anonymised tenant IDs, and the NinjaOne feed. |
+| Decision logic on real clients | Built and demonstrated on a made-up estate (section 12). Running it on real client data needs the data owner's written approval, anonymised tenant IDs, and the NinjaOne feed. |
 | Version-aware matching | The demo matches software by name only. Real use needs version ranges (CPE `versionStartIncluding` / `versionEndExcluding`). |
 
 # 11. Repository structure
@@ -499,7 +499,7 @@ If CISA has not assessed a CVE yet, SSVC uses the CERT/CC defaults (Exploitation
 
 1. **Two databases, always.** This platform's Supabase and the thesis research database never connect. Nothing here reads or writes research data.
 2. **The demo estate is invented.** `tenant_01` (a clinic group), `tenant_02` (a factory) and `tenant_03` (an accounting firm) do not exist. No client data is in this repository.
-3. **Client data stays Subnet's.** Using real client inventory (via NinjaOne, TI 09) needs Matt's written approval; for thesis use it must also be anonymised to `tenant_nn` IDs.
+3. **Client data stays with its owner.** Using real client inventory (via NinjaOne, TI 09) needs the owner's written approval; for thesis use it must also be anonymised to `tenant_nn` IDs.
 4. **This platform is a demonstration, not thesis evidence.** Thesis results come only from the research database and its pre-registered method.
 5. **Matching is by product name only.** A row means "check this device", not "this device is vulnerable".
 
