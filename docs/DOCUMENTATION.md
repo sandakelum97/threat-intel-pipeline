@@ -6,7 +6,7 @@ date: "November 2026"
 ---
 
 **Author:** Tharaka D. — Security Engineer (L2/L3), Subnet, via TGT Global · GitHub `sandakelum97`
-**Version:** 1.3 · November 2026 · Repository: `threat-intel-pipeline` (private)
+**Version:** 1.3 · November 2026 · Repository: `threat-intel-pipeline` (public)
 
 # 1. What this project is, in plain words
 
@@ -62,7 +62,7 @@ Everything runs on free or low-cost services: **n8n** (the workflow engine, runn
 | AI | Claude Haiku 5.5 via the Anthropic API | Anthropic cloud | Fast and cheap for 2-sentence summaries (about US$0.001 each), billed to the Console API credit. |
 | Email | Gmail SMTP (app password) | Google | Available now; Teams webhook is one node swap away. |
 | Dashboard | Single static HTML file (Chart.js) | Vercel | No server, no build step, loads straight from Supabase with the public (anon) key. |
-| Source control | Git, private GitHub repo | GitHub | Config placeholders only; keys never leave the laptop. |
+| Source control | Git, public GitHub repo | GitHub | Config placeholders only; keys never leave the laptop. |
 
 # 2.1 Toolset — everything used to build and run it
 
@@ -78,7 +78,7 @@ Everything runs on free or low-cost services: **n8n** (the workflow engine, runn
 | **RSS feeds** | Public | News and advisories | BleepingComputer, The Hacker News, AskWoody, ACSC alerts & advisories, CISA advisories, MSRC, Fortinet PSIRT. |
 | **Gmail SMTP** | App password | Email delivery | `smtp.gmail.com:465`, credential "SMTP account" in n8n. |
 | **Vercel** | Hobby | Hosts the dashboard | Static HTML; redeploys on every push to GitHub. |
-| **GitHub** | Private repo | Source control | Config placeholders only. |
+| **GitHub** | Public repo | Source control | Config placeholders only. |
 | **Chart.js** | 4.4.1 from cdnjs (SRI-pinned) | Dashboard charts | |
 | **Google Fonts** | Fira Sans / Fira Code | Dashboard typography | |
 | **Python 3** | — | `build_v3.py` generator that produces the eight workflow JSON files from one source (shared Config, helpers, email templates) | Keeps the Config block identical across workflows. |

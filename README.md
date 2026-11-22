@@ -1,8 +1,12 @@
 # Threat Intel Pipeline (n8n + Supabase + Teams)
 
-Replaces the daily "open eight websites" routine with three n8n workflows that collect, filter and post
-only what is relevant to our client environments. Keyword/vendor filtering only in this version; an
-AI relevancy step is wired in but disabled.
+Replaces the daily "open eight websites" routine with nine n8n workflows (TI 00 to TI 08) that collect, filter and post
+only what is relevant to our client environments. Vendor and keyword filtering decide what is kept;
+Claude (Haiku) writes short summaries and a relevance verdict for articles. An SSVC decision layer on a
+made-up estate was added in November 2026.
+
+**Full, current documentation:** [`docs/DOCUMENTATION.md`](docs/DOCUMENTATION.md) (v1.3). Where this README and
+that document differ, the document is right.
 
 ![architecture](docs/architecture.png)
 
@@ -18,6 +22,7 @@ AI relevancy step is wired in but disabled.
 | **TI 06 – AI Summaries** | hourly | Writes a 2-sentence Claude summary + "why it matters / action" for relevant articles that don't have one yet (25 per run), plus a relevance verdict (`ai_verdict`). Articles Claude judges not relevant are hidden from the digest, ticket note and dashboard "Relevant only" view. |
 | **TI 07 – Daily Ticket Note** | weekdays 07:00 | Builds a plain-text note of the last 24 h (new KEV entries, new high-severity CVEs in our stack, relevant news) – ready to paste into a ticket note – emails it and stores it in `ticket_notes` (dashboard → *Ticket note* tab → *Copy note*). |
 | **TI 00 – Verify Data** | manual | Cross-checks what we stored against the live sources: KEV rows vs the CISA catalog (missing/mismatched fields), a sample of CVSS scores vs NVD, EPSS vs FIRST, article links (HTTP 200), and whether each AI summary mentions the product. Emails a pass/fail report. Run it before a demo. |
+| **TI 08 – Vulnrichment** | every 6 h | Reads the CISA Vulnrichment file for each tracked CVE (up to 150 per run) and stores Exploitation, Automatable and Technical Impact, used by the SSVC (demo) tab. Details in `docs/DOCUMENTATION.md` sections 3.9 and 12. |
 
 Every KEV entry, CVE Watch item and relevant article is tagged with a **product group** (`PRODUCT_GROUPS` in Config: Microsoft, Fortinet, ConnectWise, …). Emails and the dashboard group by it.
 
@@ -60,7 +65,7 @@ enable that node and disable *Send email*. Needs a work/school tenant; personal 
 3. Run **TI 01** once manually. The first run stores the whole in-scope backlog but only posts entries
    added in the last `KEV_LOOKBACK_DAYS` (14) to Teams.
 4. Run **TI 02** once manually, then **TI 03** to see the first digest.
-5. Activate all three.
+5. Import and activate the other workflows the same way (`04` to `08`; `00` and the manual checks stay manual).
 
 ### 4. Dashboard
 Open `dashboard/index.html`, set `SUPABASE_URL` and `SUPABASE_ANON_KEY` at the top of the script.
@@ -73,7 +78,7 @@ Before the meeting: run **TI 00 – Verify Data** (manual) and keep the "all che
 n8n, the dashboard and Gmail in separate tabs; do **not** open any Config node on screen (it holds keys).
 
 1. The problem: the list of sites we check by hand every morning.
-2. n8n overview page: seven workflows, their schedules, last-run status (green ticks).
+2. n8n overview page: nine workflows, their schedules, last-run status (green ticks).
 3. **TI 01 – KEV Monitor**: open, *Execute workflow*, click the Filter node → `total_in_catalog` vs
    `in_scope`. "1,700 exploited CVEs in the world; these are the ones for products we run."
 4. **TI 04 – CVE Watch**: same idea for CVEs that are *not yet* exploited (NVD, CVSS ≥ 7, EPSS).
